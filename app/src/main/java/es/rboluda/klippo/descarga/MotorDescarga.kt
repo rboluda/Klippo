@@ -1,6 +1,9 @@
 package es.rboluda.klippo.descarga
 
 import android.content.Context
+import android.media.MediaExtractor
+import android.media.MediaFormat
+import androidx.core.net.toUri
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
@@ -63,8 +66,34 @@ class MotorDescarga(private val context: Context) {
     ): List<File> = withContext(Dispatchers.IO) {
         check(esperarListo()) { context.getString(R.string.motor_no_listo) }
         carpeta.mkdirs()
+        val formatoNormal = if (calidad.soloAudio) null else formato(calidad.alturaMax, esTikTok(url))
+        ejecutar(id, url, carpeta, cookies, calidad, formatoNormal, alProgreso)
+        var archivos = archivosDescargados(carpeta)
+
+        // Comprobación de audio: hay formatos que dicen tener sonido y no lo tienen (algunos
+        // H.265 de TikTok, yt-dlp issues 16622 y 17372). Si un vídeo llega mudo, se repite la
+        // descarga con un formato de imagen y sonido juntos en H.264, que siempre lo trae.
+        if (!calidad.soloAudio && archivos.any { !tieneAudio(it) }) {
+            archivos.forEach { it.delete() }
+            File(carpeta, ARCHIVO_TITULO).delete()
+            ejecutar(id, url, carpeta, cookies, calidad, formatoConAudio(calidad.alturaMax), alProgreso)
+            archivos = archivosDescargados(carpeta)
+        }
+        archivos
+    }
+
+    // Una ejecución de yt-dlp. [formatoVideo] null = solo audio
+    private fun ejecutar(
+        id: String,
+        url: String,
+        carpeta: File,
+        cookies: File?,
+        calidad: Calidad,
+        formatoVideo: String?,
+        alProgreso: (progreso: Float, etaSegundos: Long) -> Unit,
+    ) {
         val peticion = YoutubeDLRequest(url).apply {
-            if (calidad.soloAudio) {
+            if (formatoVideo == null) {
                 // M4A (AAC) tal cual si existe; si no, FFmpeg lo convierte
                 addOption("-f", "bestaudio[ext=m4a]/bestaudio")
                 addOption("-x")
@@ -74,7 +103,7 @@ class MotorDescarga(private val context: Context) {
                 addOption("--convert-thumbnails", "jpg")
                 addOption("-o", "thumbnail:" + File(carpeta, "miniatura.%(ext)s").absolutePath)
             } else {
-                addOption("-f", formato(calidad.alturaMax))
+                addOption("-f", formatoVideo)
                 // Si solo hay WebM/MKV, se cambia el contenedor a MP4 sin recodificar
                 addOption("--remux-video", "mp4")
             }
@@ -100,12 +129,33 @@ class MotorDescarga(private val context: Context) {
         YoutubeDL.getInstance().execute(peticion, id) { progreso, eta, _ ->
             alProgreso((progreso / 100f).coerceIn(0f, 1f), eta)
         }
-        // Orden natural: video-2 antes que video-10
+    }
+
+    // Orden natural: video-2 antes que video-10
+    private fun archivosDescargados(carpeta: File): List<File> =
         carpeta.listFiles { f -> f.extension in EXTENSIONES }
             ?.sortedBy { it.nameWithoutExtension.substringAfter('-', "0").toIntOrNull() ?: 0 }
             ?.takeIf { it.isNotEmpty() }
             ?: error(context.getString(R.string.descarga_sin_archivo))
+
+    // ¿Tiene el archivo alguna pista de audio? (se lee el propio MP4, sin red)
+    private fun tieneAudio(archivo: File): Boolean {
+        val extractor = MediaExtractor()
+        return try {
+            extractor.setDataSource(archivo.absolutePath)
+            (0 until extractor.trackCount).any {
+                extractor.getTrackFormat(it).getString(MediaFormat.KEY_MIME)?.startsWith("audio/") == true
+            }
+        } catch (e: Exception) {
+            // Si no se puede leer, no se reintenta a ciegas
+            true
+        } finally {
+            extractor.release()
+        }
     }
+
+    private fun esTikTok(url: String): Boolean =
+        url.toUri().host?.lowercase()?.let { it == "tiktok.com" || it.endsWith(".tiktok.com") } == true
 
     // Un título por línea (uno por vídeo si es un carrusel)
     fun leerTitulos(carpeta: File): List<String> =
@@ -140,18 +190,40 @@ class MotorDescarga(private val context: Context) {
         // Máximo de vídeos que se bajan de un carrusel
         private const val MAX_CARRUSEL = 20
 
-        // Mejor calidad en MP4, prefiriendo H.264 (se comparte y edita sin problemas);
-        // si no existe, cualquier MP4 y, en último caso, lo mejor disponible.
-        // Con [alturaMax] se limita la resolución; si nada cumple el límite, se baja lo que haya.
-        fun formato(alturaMax: Int?): String {
+        /**
+         * Mejor calidad en MP4, prefiriendo H.264 (se comparte y edita sin problemas); si no
+         * existe, cualquier MP4 y, en último caso, lo mejor disponible. Con [alturaMax] se
+         * limita la resolución; si nada cumple el límite, se baja lo que haya.
+         * H.264 aparece como "avc1…" en casi todas las webs y como "h264" en TikTok.
+         *
+         * TikTok es distinto: su formato de "audio" no es el sonido del vídeo sino la canción
+         * de la publicación, y algunos vídeos H.265 vienen sin sonido. Por eso ahí solo se
+         * eligen formatos que ya traen imagen y sonido juntos ("b"), nunca vídeo + audio aparte.
+         */
+        fun formato(alturaMax: Int?, tiktok: Boolean): String {
+            val limite = alturaMax?.let { "[height<=$it]" }.orEmpty()
+            val opciones = if (tiktok) {
+                listOf("b[vcodec^=h264]$limite", "b[vcodec^=avc]$limite", "b$limite", "b[vcodec^=h264]", "b")
+            } else {
+                listOf(
+                    "bv*[ext=mp4][vcodec^=avc]$limite+ba[ext=m4a]",
+                    "bv*[ext=mp4][vcodec^=h264]$limite+ba[ext=m4a]",
+                    "bv*[ext=mp4]$limite+ba[ext=m4a]",
+                    "b[ext=mp4]$limite",
+                    "bv*$limite+ba",
+                    "b$limite",
+                    "b",
+                )
+            }
+            return opciones.distinct().joinToString("/")
+        }
+
+        // Segundo intento cuando el vídeo llega sin sonido: imagen y sonido en un solo formato,
+        // H.264 primero (TikTok, Instagram y X siempre lo ofrecen con audio)
+        fun formatoConAudio(alturaMax: Int?): String {
             val limite = alturaMax?.let { "[height<=$it]" }.orEmpty()
             return listOf(
-                "bv*[ext=mp4][vcodec^=avc]$limite+ba[ext=m4a]",
-                "bv*[ext=mp4]$limite+ba[ext=m4a]",
-                "b[ext=mp4]$limite",
-                "bv*$limite+ba",
-                "b$limite",
-                "b",
+                "b[vcodec^=h264]$limite", "b[vcodec^=avc]$limite", "b[vcodec^=h264]", "b[vcodec^=avc]", "b",
             ).distinct().joinToString("/")
         }
         private const val ARCHIVO_TITULO = "titulo.txt"
