@@ -15,7 +15,7 @@ abstract class MarcaCompilacion : ValueSource<String, ValueSourceParameters.None
 }
 
 // Versión de Klippo (SemVer: MAYOR.MENOR.PARCHE). La sube scripts/publicar.ps1 con -Subir.
-val versionKlippo = "1.2.1"
+val versionKlippo = "1.2.2"
 val marca = providers.of(MarcaCompilacion::class) {}.get()
 val (versionMayor, versionMenor, versionParche) = versionKlippo.split(".").map { it.toInt() }
 // versionCode siempre creciente: 1.2.3 → 1020300. Queda por encima de los de las versiones
