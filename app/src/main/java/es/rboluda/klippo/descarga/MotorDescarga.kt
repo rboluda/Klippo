@@ -107,7 +107,7 @@ class MotorDescarga(private val context: Context) {
                 // Si solo hay WebM/MKV, se cambia el contenedor a MP4 sin recodificar
                 addOption("--remux-video", "mp4")
             }
-            if (Plataforma.deUrl(url) != null) {
+            if (Plataforma.deUrl(url)?.tieneCarruseles == true) {
                 // Instagram y X: un carrusel es una "lista"; se bajan todos sus vídeos
                 // (yt-dlp no descarga las fotos)
                 addOption("--yes-playlist")
@@ -202,16 +202,24 @@ class MotorDescarga(private val context: Context) {
          */
         fun formato(alturaMax: Int?, tiktok: Boolean): String {
             val limite = alturaMax?.let { "[height<=$it]" }.orEmpty()
+            // Los archivos completos de Facebook ("sd"/"hd") no dicen su resolución: con "<=?"
+            // no se descartan por no saberla
+            val limiteCompleto = alturaMax?.let { "[height<=?$it]" }.orEmpty()
             val opciones = if (tiktok) {
                 listOf("b[vcodec^=h264]$limite", "b[vcodec^=avc]$limite", "b$limite", "b[vcodec^=h264]", "b")
             } else {
                 listOf(
+                    // 1. H.264 con el audio aparte (YouTube, Instagram, X)
                     "bv*[ext=mp4][vcodec^=avc]$limite+ba[ext=m4a]",
                     "bv*[ext=mp4][vcodec^=h264]$limite+ba[ext=m4a]",
+                    // 2. Un MP4 completo con imagen y sonido (el "hd" de Facebook es H.264)
+                    "b[ext=mp4][vcodec^=avc]$limiteCompleto",
+                    "b[ext=mp4][vcodec^=h264]$limiteCompleto",
+                    "b[ext=mp4]$limiteCompleto",
+                    // 3. Otros códecs (VP9, AV1) con el audio aparte, remuxados a MP4
                     "bv*[ext=mp4]$limite+ba[ext=m4a]",
-                    "b[ext=mp4]$limite",
                     "bv*$limite+ba",
-                    "b$limite",
+                    "b$limiteCompleto",
                     "b",
                 )
             }

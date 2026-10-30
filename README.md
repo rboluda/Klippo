@@ -7,7 +7,7 @@
 <p align="center"><b>Español</b> · <a href="README.en.md">English</a></p>
 
 <p align="center">
-  <b>Descarga, recorta y comparte vídeos de YouTube, TikTok, X e Instagram.</b><br>
+  <b>Descarga, recorta y comparte vídeos de YouTube, TikTok, X, Instagram y Facebook.</b><br>
   Sin publicidad. Sin cuentas. Sin restos en tu galería.<br>
   Los vídeos se borran solos: Klippo vacía su caché cada hora.
 </p>
@@ -52,7 +52,7 @@ lo contrario:
 ## Qué hace
 
 **Descargar**
-- YouTube, TikTok, X e Instagram (y muchas webs más gracias a yt-dlp).
+- YouTube, TikTok, X, Instagram y Facebook (y muchas webs más gracias a yt-dlp).
 - Carruseles de Instagram y X: se descargan todos sus vídeos, cada uno por separado.
 - Pega el enlace (se autorrellena desde el portapapeles) o usa *Compartir → Klippo* desde
   la app de origen: Klippo descarga el vídeo y, al terminar, abre el editor.
@@ -60,11 +60,12 @@ lo contrario:
 - Eliges la calidad en cada vídeo: mejor disponible, 1080p, 720p, 480p o **solo audio (M4A)**.
   Prefiere H.264 para que el vídeo se vea y se comparta sin problemas en cualquier móvil.
 - Progreso en una notificación, con opción de cancelar.
-- Para los vídeos que piden sesión (Instagram, X) puedes iniciarla una vez desde la propia
+- Para los vídeos que piden sesión (Instagram, X, Facebook) puedes iniciarla una vez desde la propia
   app. Klippo nunca ve tu contraseña: escribes en la web oficial y solo se guardan las cookies.
 
 **Editar**
-- Recortar el inicio y el final, con vista previa en bucle del tramo elegido.
+- Recortar el inicio y el final, arrastrando o escribiendo el tiempo exacto (a la décima),
+  con vista previa en bucle del tramo elegido.
 - Encuadre en 9:16, 1:1, 4:5 o libre: mueve y ajusta el marco sobre el vídeo.
 - Texto encima del vídeo, con contorno o con fondo.
 - Emojis encima del vídeo: arrástralos, pellízcalos para cambiar el tamaño.

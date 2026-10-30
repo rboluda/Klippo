@@ -7,7 +7,7 @@
 <p align="center"><a href="README.md">Español</a> · <b>English</b></p>
 
 <p align="center">
-  <b>Download, trim and share videos from YouTube, TikTok, X and Instagram.</b><br>
+  <b>Download, trim and share videos from YouTube, TikTok, X, Instagram and Facebook.</b><br>
   No ads. No accounts. Nothing left behind in your gallery.<br>
   Videos delete themselves: Klippo clears its cache every hour.
 </p>
@@ -52,7 +52,7 @@ gallery with files you only wanted to forward once. Klippo does the opposite:
 ## What it does
 
 **Download**
-- YouTube, TikTok, X and Instagram (and many more sites thanks to yt-dlp).
+- YouTube, TikTok, X, Instagram and Facebook (and many more sites thanks to yt-dlp).
 - Instagram and X carousels: every video in the post is downloaded, each on its own.
 - Paste the link (it's filled in from the clipboard automatically) or use *Share → Klippo*
   from the source app: Klippo downloads the video and opens the editor when it's done.
@@ -60,12 +60,13 @@ gallery with files you only wanted to forward once. Klippo does the opposite:
 - Choose the quality for every video: best available, 1080p, 720p, 480p or **audio only (M4A)**.
   H.264 is preferred so the video plays and shares without trouble on any phone.
 - Progress in a notification, with a cancel button.
-- For videos that require being signed in (Instagram, X) you can sign in once from the app
+- For videos that require being signed in (Instagram, X, Facebook) you can sign in once from the app
   itself. Klippo never sees your password: you type it on the official website and only the
   cookies are kept.
 
 **Edit**
-- Trim the start and the end, with a looping preview of the selected part.
+- Trim the start and the end, by dragging or typing the exact time (to the tenth of a
+  second), with a looping preview of the selected part.
 - Crop to 9:16, 1:1, 4:5 or free: move and resize the frame over the video.
 - Text over the video, with an outline or a background.
 - Emojis over the video: drag them, pinch them to resize.

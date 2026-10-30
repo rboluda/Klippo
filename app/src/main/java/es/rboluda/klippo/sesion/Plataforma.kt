@@ -28,7 +28,19 @@ enum class Plataforma(
         dominios = listOf("x.com", "twitter.com"),
         cookieSesion = "auth_token",
         archivo = "x.txt",
+    ),
+    FACEBOOK(
+        nombre = "Facebook",
+        urlLogin = "https://www.facebook.com/login/",
+        urlCookies = "https://www.facebook.com",
+        // fb.watch y fb.com redirigen a facebook.com, que es donde se usan las cookies
+        dominios = listOf("facebook.com", "fb.watch", "fb.com"),
+        cookieSesion = "c_user",
+        archivo = "facebook.txt",
     );
+
+    // Instagram y X agrupan varios vídeos en una publicación (carrusel)
+    val tieneCarruseles: Boolean get() = this == INSTAGRAM || this == X
 
     companion object {
         fun deUrl(url: String): Plataforma? {

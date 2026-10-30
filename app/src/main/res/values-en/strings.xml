@@ -41,14 +41,14 @@
     <string name="actualizacion_ver_inicio">A new version is available: you\'ll find it on the home screen</string>
 
     <string name="acerca_titulo">About Klippo</string>
-    <string name="acerca_descripcion">Download videos from YouTube, TikTok, X and Instagram, trim them and share them. No fuss.</string>
+    <string name="acerca_descripcion">Download videos from YouTube, TikTok, X, Instagram and Facebook, trim them and share them. No fuss.</string>
     <string name="acerca_autor">Made by rboluda</string>
     <string name="acerca_mi_github">My GitHub</string>
     <string name="acerca_codigo">Source code</string>
     <string name="acerca_principios">No ads, no analytics, no accounts. Your videos never reach your gallery unless you ask.</string>
     <string name="acerca_software_libre">Built with free software</string>
     <string name="acerca_licencia">Free software · GPL-3.0 license</string>
-    <string name="inicio_url_ayuda">YouTube, TikTok, X or Instagram link</string>
+    <string name="inicio_url_ayuda">YouTube, TikTok, X, Instagram or Facebook link</string>
     <string name="inicio_descargar">Download</string>
     <string name="inicio_pegar">Paste</string>
     <string name="inicio_borrar">Clear</string>
