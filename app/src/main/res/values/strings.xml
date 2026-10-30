@@ -122,7 +122,16 @@
     <string name="emoji_otro">Otro (usa el teclado de emojis)</string>
     <string name="emoji_anadir">Añadir</string>
     <string name="emoji_ayuda">Arrastra para mover, pellizca para cambiar el tamaño, mantén pulsado para borrar.</string>
-    <string name="recorte_resumen" translatable="false">%1$s – %2$s · %3$s</string>
+    <string name="recorte_inicio">Inicio %1$s</string>
+    <string name="recorte_fin">Fin %1$s</string>
+    <string name="tiempo_titulo_inicio">Inicio del recorte</string>
+    <string name="tiempo_titulo_fin">Fin del recorte</string>
+    <string name="tiempo_minutos">min</string>
+    <string name="tiempo_segundos">segundos</string>
+    <string name="tiempo_ayuda">Segundos con décimas, por ejemplo 5,3</string>
+    <string name="tiempo_error_formato">Escribe un número válido</string>
+    <string name="tiempo_error_rango">Tiene que estar entre %1$s y %2$s</string>
+    <string name="aceptar">Aceptar</string>
     <string name="exportar_titulo">Exportar</string>
     <string name="exportar_no_disponible">Este vídeo ya no está disponible</string>
     <string name="exportar_generando">Generando vídeo… %1$d %%</string>

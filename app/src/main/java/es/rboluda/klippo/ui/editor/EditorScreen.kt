@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
@@ -57,7 +58,6 @@ import es.rboluda.klippo.edicion.Formato
 import es.rboluda.klippo.edicion.Recorte
 import kotlinx.coroutines.delay
 import java.io.File
-import java.util.Locale
 
 // Herramientas de la barra inferior
 private enum class Herramienta(@param:StringRes val nombre: Int, @param:DrawableRes val icono: Int) {
@@ -315,7 +315,11 @@ fun EditorScreen(
 // Margen para no saltar al inicio por redondeos al buscar justo en el borde del tramo
 private const val MARGEN_MS = 250L
 
-// Doble barra para elegir inicio y fin, con los tiempos y la duración resultante
+// Extremo del recorte que se está escribiendo a mano
+private enum class Extremo { INICIO, FIN }
+
+// Doble barra para elegir inicio y fin; los tiempos son botones para escribirlos a mano
+// con precisión de décima
 @Composable
 private fun PanelRecorte(
     recorte: Recorte,
@@ -323,17 +327,55 @@ private fun PanelRecorte(
     onCambiar: (inicioMs: Long, finMs: Long, movidoMs: Long) -> Unit,
     onSoltar: () -> Unit,
 ) {
+    var editando by rememberSaveable { mutableStateOf<Extremo?>(null) }
+    val minimo = EditorViewModel.DURACION_MINIMA_MS
+
+    when (editando) {
+        Extremo.INICIO -> DialogoTiempo(
+            titulo = stringResource(R.string.tiempo_titulo_inicio),
+            valorMs = recorte.inicioMs,
+            minimoMs = 0,
+            maximoMs = recorte.finMs - minimo,
+            onAceptar = { ms ->
+                onCambiar(ms, recorte.finMs, ms)
+                editando = null
+            },
+            onCancelar = { editando = null },
+        )
+        Extremo.FIN -> DialogoTiempo(
+            titulo = stringResource(R.string.tiempo_titulo_fin),
+            valorMs = recorte.finMs,
+            minimoMs = recorte.inicioMs + minimo,
+            maximoMs = duracionMs,
+            onAceptar = { ms ->
+                onCambiar(recorte.inicioMs, ms, ms)
+                editando = null
+            },
+            onCancelar = { editando = null },
+        )
+        null -> Unit
+    }
+
     Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-            Text(
-                text = stringResource(
-                    R.string.recorte_resumen,
-                    formatearTiempo(recorte.inicioMs),
-                    formatearTiempo(recorte.finMs),
-                    formatearTiempo(recorte.duracionMs),
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = { editando = Extremo.INICIO }) {
+                    Text(stringResource(R.string.recorte_inicio, formatearTiempo(recorte.inicioMs)))
+                }
+                Text(
+                    text = formatearTiempo(recorte.duracionMs),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = { editando = Extremo.FIN }) {
+                    Text(stringResource(R.string.recorte_fin, formatearTiempo(recorte.finMs)))
+                }
+            }
             RangeSlider(
                 value = recorte.inicioMs.toFloat()..recorte.finMs.toFloat(),
                 onValueChange = { rango ->
@@ -372,10 +414,4 @@ private fun rememberReproductor(archivo: File): ExoPlayer {
         }
     }
     return reproductor
-}
-
-// "1:05.3" (minutos, segundos y décimas)
-private fun formatearTiempo(ms: Long): String {
-    val decimas = ms / 100
-    return String.format(Locale.ROOT, "%d:%02d.%d", decimas / 600, (decimas / 10) % 60, decimas % 10)
 }

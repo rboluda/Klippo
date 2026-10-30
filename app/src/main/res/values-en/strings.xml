@@ -118,6 +118,16 @@
     <string name="emoji_otro">Other (use the emoji keyboard)</string>
     <string name="emoji_anadir">Add</string>
     <string name="emoji_ayuda">Drag to move, pinch to resize, long-press to delete.</string>
+    <string name="recorte_inicio">Start %1$s</string>
+    <string name="recorte_fin">End %1$s</string>
+    <string name="tiempo_titulo_inicio">Trim start</string>
+    <string name="tiempo_titulo_fin">Trim end</string>
+    <string name="tiempo_minutos">min</string>
+    <string name="tiempo_segundos">seconds</string>
+    <string name="tiempo_ayuda">Seconds with tenths, e.g. 5.3</string>
+    <string name="tiempo_error_formato">Enter a valid number</string>
+    <string name="tiempo_error_rango">It must be between %1$s and %2$s</string>
+    <string name="aceptar">OK</string>
     <string name="exportar_titulo">Export</string>
     <string name="exportar_no_disponible">This video is no longer available</string>
     <string name="exportar_generando">Creating video… %1$d %%</string>
