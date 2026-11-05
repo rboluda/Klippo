@@ -9,6 +9,7 @@ import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
 import es.rboluda.klippo.R
 import es.rboluda.klippo.ajustes.Calidad
+import es.rboluda.klippo.edicion.Ffmpeg
 import es.rboluda.klippo.sesion.Plataforma
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -71,15 +72,67 @@ class MotorDescarga(private val context: Context) {
         var archivos = archivosDescargados(carpeta)
 
         // Comprobación de audio: hay formatos que dicen tener sonido y no lo tienen (algunos
-        // H.265 de TikTok, yt-dlp issues 16622 y 17372). Si un vídeo llega mudo, se repite la
-        // descarga con un formato de imagen y sonido juntos en H.264, que siempre lo trae.
+        // de TikTok, yt-dlp issue 16622). Si un vídeo llega mudo:
+        // 1) se repite la descarga pidiendo imagen y sonido juntos en H.264 (TikTok cambia la
+        //    lista de formatos entre peticiones y a la segunda suele haber uno bueno);
         if (!calidad.soloAudio && archivos.any { !tieneAudio(it) }) {
             archivos.forEach { it.delete() }
             File(carpeta, ARCHIVO_TITULO).delete()
             ejecutar(id, url, carpeta, cookies, calidad, formatoConAudio(calidad.alturaMax), alProgreso)
             archivos = archivosDescargados(carpeta)
         }
+        // 2) si sigue mudo, la plataforma ya no ofrece ningún formato completo con sonido
+        //    (TikTok lo da aparte, como formato "audio"): se descarga esa pista y se une al vídeo
+        if (!calidad.soloAudio && archivos.size == 1 && !tieneAudio(archivos.first())) {
+            anadirAudioAparte(id, url, carpeta, cookies, archivos.first(), alProgreso)
+        }
         archivos
+    }
+
+    // Descarga solo el audio del enlace y lo une a [video] (imagen copiada tal cual, audio en AAC
+    // cortado a la duración del vídeo). Si algo falla, el vídeo se queda como estaba.
+    private suspend fun anadirAudioAparte(
+        id: String,
+        url: String,
+        carpeta: File,
+        cookies: File?,
+        video: File,
+        alProgreso: (progreso: Float, etaSegundos: Long) -> Unit,
+    ) {
+        val temporal = File(carpeta, "audio-aparte").apply { mkdirs() }
+        try {
+            val peticion = YoutubeDLRequest(url).apply {
+                addOption("-f", "ba[ext=m4a]/ba")
+                addOption("--no-playlist")
+                addOption("-o", File(temporal, "audio.%(ext)s").absolutePath)
+                cookies?.let { addOption("--cookies", it.absolutePath) }
+            }
+            YoutubeDL.getInstance().execute(peticion, id) { progreso, eta, _ ->
+                alProgreso((progreso / 100f).coerceIn(0f, 1f), eta)
+            }
+            val audio = temporal.listFiles()?.firstOrNull { it.isFile && it.length() > 0 } ?: return
+            val unido = File(temporal, "unido.mp4")
+            Ffmpeg.ejecutar(
+                context,
+                listOf(
+                    "-i", video.absolutePath, "-i", audio.absolutePath,
+                    "-map", "0:v:0", "-map", "1:a:0",
+                    "-c:v", "copy", "-c:a", "aac", "-b:a", "160k",
+                    "-shortest", "-movflags", "+faststart",
+                    "-f", "mp4", unido.absolutePath,
+                ),
+                duracionUs = 0,
+                alProgreso = {},
+            )
+            // renameTo sustituye el archivo de golpe (si fallara, el vídeo original sigue intacto)
+            if (tieneAudio(unido)) unido.renameTo(video)
+        } catch (e: YoutubeDL.CanceledException) {
+            throw e
+        } catch (e: Exception) {
+            // Sin audio aparte disponible: se entrega el vídeo tal cual
+        } finally {
+            temporal.deleteRecursively()
+        }
     }
 
     // Una ejecución de yt-dlp. [formatoVideo] null = solo audio
