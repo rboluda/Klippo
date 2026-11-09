@@ -81,8 +81,8 @@ gallery with files you only wanted to forward once. Klippo does the opposite:
 **Share**
 - Shortcuts on every video: send via WhatsApp, share with any app, save to the gallery
   or edit.
-- *Save to gallery* creates `Movies/Klippo/klippo_<date>.mp4` (or `Music/Klippo/…m4a` for
-  audio only). If you don't tap it, the video never leaves Klippo.
+- *Save to gallery* creates `Movies/Klippo/<video title>.mp4` (or `Music/Klippo/…m4a` for
+  audio only, with its cover art, title and artist). If you don't tap it, the video never leaves Klippo.
 
 **Your way**
 - List or grid view with thumbnails.

@@ -80,8 +80,8 @@ lo contrario:
 **Compartir**
 - Accesos directos en cada vídeo: enviar por WhatsApp, compartir con cualquier app,
   guardar en la galería o editar.
-- *Guardar en galería* crea `Movies/Klippo/klippo_<fecha>.mp4` (o `Music/Klippo/…m4a` si es
-  solo audio). Si no lo pulsas, el vídeo nunca sale de Klippo.
+- *Guardar en galería* crea `Movies/Klippo/<título del vídeo>.mp4` (o `Music/Klippo/…m4a` si es
+  solo audio, con su carátula, título y artista). Si no lo pulsas, el vídeo nunca sale de Klippo.
 
 **A tu gusto**
 - Lista o mosaico con miniaturas.
