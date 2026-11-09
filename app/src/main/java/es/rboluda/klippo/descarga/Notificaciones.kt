@@ -128,7 +128,7 @@ object Notificaciones {
             Notification.Action.Builder(
                 null,
                 context.getString(R.string.notif_guardar),
-                Compartir.pendienteGuardar(context, archivo),
+                Compartir.pendienteGuardar(context, archivo, titulo),
             ).build(),
         )
     }

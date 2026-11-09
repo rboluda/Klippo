@@ -24,7 +24,8 @@ object GuardarEnGaleria {
     /**
      * Guarda [archivo] en la galería. Sin más datos queda como klippo_<fecha>.mp4 en la carpeta
      * Klippo; con [subcarpeta] (el nombre de una lista) va dentro de Klippo/<subcarpeta> y con
-     * [titulo] el archivo se llama como el vídeo. Si ya existe uno igual, Android le añade (1).
+     * [titulo] el archivo se llama como el vídeo (si no se indica, se busca en el meta.json de la
+     * descarga). Si ya existe uno igual, Android le añade (1).
      */
     suspend fun guardar(
         context: Context,
@@ -33,7 +34,8 @@ object GuardarEnGaleria {
         titulo: String? = null,
     ): Uri = withContext(Dispatchers.IO) {
         val audio = archivo.extension == "m4a"
-        val base = titulo?.let(::nombreValido) ?: "klippo_${LocalDateTime.now().format(FORMATO_FECHA)}"
+        val base = (titulo ?: MetaDescarga.leerTitulo(archivo.parentFile))?.let(::nombreValido)
+            ?: "klippo_${LocalDateTime.now().format(FORMATO_FECHA)}"
         val nombre = "$base.${archivo.extension}"
         val carpeta = "Klippo" + (subcarpeta?.let(::nombreValido)?.let { "/$it" } ?: "")
         val valores = ContentValues().apply {

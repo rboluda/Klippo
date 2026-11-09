@@ -22,6 +22,14 @@ object MetaDescarga {
         File(descarga.carpeta, ARCHIVO).writeText(json.toString())
     }
 
+    // Título guardado de la descarga que hay en [carpeta], si lo hay
+    fun leerTitulo(carpeta: File?): String? = try {
+        carpeta?.let { File(it, ARCHIVO) }?.takeIf { it.exists() }
+            ?.let { JSONObject(it.readText()).optString("titulo").ifBlank { null } }
+    } catch (e: Exception) {
+        null
+    }
+
     // Solo devuelve descargas completadas (carpeta con meta.json y un MP4 o M4A)
     fun leerCompletada(carpeta: File): Descarga? {
         val meta = File(carpeta, ARCHIVO).takeIf { it.exists() } ?: return null

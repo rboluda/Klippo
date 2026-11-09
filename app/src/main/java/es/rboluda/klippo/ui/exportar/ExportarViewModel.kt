@@ -112,7 +112,7 @@ class ExportarViewModel(
         _guardando.value = true
         viewModelScope.launch {
             val texto = try {
-                GuardarEnGaleria.guardar(app, archivo)
+                GuardarEnGaleria.guardar(app, archivo, titulo = descarga?.titulo)
                 app.getString(R.string.galeria_guardado)
             } catch (e: Exception) {
                 app.getString(R.string.galeria_error)

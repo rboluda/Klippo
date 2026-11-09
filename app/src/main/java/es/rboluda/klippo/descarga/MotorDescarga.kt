@@ -173,6 +173,18 @@ class MotorDescarga(private val context: Context) {
                 // guarda con el mismo nombre que el audio (video.jpg, video-2.jpg…)
                 addOption("--write-thumbnail")
                 addOption("--convert-thumbnails", "jpg")
+                // Esa imagen va también dentro del M4A como carátula (con --write-thumbnail
+                // yt-dlp conserva el JPG), junto con título y artista. En una lista, su nombre
+                // pasa a ser el álbum y la posición, el número de pista (si no es una lista,
+                // yt-dlp solo avisa y sigue)
+                addOption("--embed-thumbnail")
+                addOption("--embed-metadata")
+                addCommands(
+                    listOf(
+                        "--parse-metadata", "playlist_title:%(album)s",
+                        "--parse-metadata", "playlist_index:%(track_number)s",
+                    )
+                )
             } else {
                 addOption("-f", formatoVideo)
                 // Si solo hay WebM/MKV, se cambia el contenedor a MP4 sin recodificar
@@ -231,9 +243,11 @@ class MotorDescarga(private val context: Context) {
             throw e
         } catch (e: Exception) {
             // Con --ignore-errors, yt-dlp acaba con error si algún elemento de la lista ha
-            // fallado: si se han bajado los demás, se dan por buenos
+            // fallado: si se han bajado los demás, se dan por buenos. En solo audio, si lo que
+            // falla es poner la carátula, el M4A ya está hecho y también vale
             val hayArchivos = carpeta.listFiles { f -> f.extension in EXTENSIONES }?.isNotEmpty() == true
-            if (total <= 1 || !hayArchivos) throw e
+            val aceptable = total > 1 || formatoVideo == null
+            if (!aceptable || !hayArchivos) throw e
         }
     }
 

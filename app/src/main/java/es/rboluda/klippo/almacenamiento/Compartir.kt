@@ -50,7 +50,7 @@ object Compartir {
     fun intentElegir(context: Context, video: File, titulo: String?): Intent {
         val selector = Intent.createChooser(envio(context, video, titulo), null)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            selector.putExtra(Intent.EXTRA_CHOOSER_CUSTOM_ACTIONS, arrayOf(accionGuardar(context, video)))
+            selector.putExtra(Intent.EXTRA_CHOOSER_CUSTOM_ACTIONS, arrayOf(accionGuardar(context, video, titulo)))
         }
         return selector
     }
@@ -74,11 +74,12 @@ object Compartir {
     }
 
     // Broadcast que guarda el archivo en la galería sin abrir nada
-    fun pendienteGuardar(context: Context, video: File): PendingIntent = PendingIntent.getBroadcast(
+    fun pendienteGuardar(context: Context, video: File, titulo: String? = null): PendingIntent = PendingIntent.getBroadcast(
         context,
         video.absolutePath.hashCode(),
         Intent(context, GuardarEnGaleriaReceiver::class.java)
-            .putExtra(GuardarEnGaleriaReceiver.EXTRA_RUTA, video.absolutePath),
+            .putExtra(GuardarEnGaleriaReceiver.EXTRA_RUTA, video.absolutePath)
+            .putExtra(GuardarEnGaleriaReceiver.EXTRA_TITULO, titulo),
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
@@ -115,10 +116,10 @@ object Compartir {
     }
 
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    private fun accionGuardar(context: Context, video: File): ChooserAction =
+    private fun accionGuardar(context: Context, video: File, titulo: String?): ChooserAction =
         ChooserAction.Builder(
             Icon.createWithResource(context, R.drawable.ic_guardar_galeria),
             context.getString(R.string.galeria_guardar),
-            pendienteGuardar(context, video),
+            pendienteGuardar(context, video, titulo),
         ).build()
 }

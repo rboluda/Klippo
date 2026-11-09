@@ -21,7 +21,7 @@ class GuardarEnGaleriaReceiver : BroadcastReceiver() {
         val pendiente = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             val texto = try {
-                GuardarEnGaleria.guardar(app, File(ruta))
+                GuardarEnGaleria.guardar(app, File(ruta), titulo = intent.getStringExtra(EXTRA_TITULO))
                 app.getString(R.string.galeria_guardado)
             } catch (e: Exception) {
                 app.getString(R.string.galeria_error)
@@ -33,5 +33,6 @@ class GuardarEnGaleriaReceiver : BroadcastReceiver() {
 
     companion object {
         const val EXTRA_RUTA = "ruta"
+        const val EXTRA_TITULO = "titulo"
     }
 }

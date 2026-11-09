@@ -66,7 +66,7 @@ fun AccionesRapidas(descarga: Descarga, onEditar: () -> Unit, modifier: Modifier
                 guardando = true
                 ambito.launch {
                     val texto = try {
-                        GuardarEnGaleria.guardar(context, video)
+                        GuardarEnGaleria.guardar(context, video, titulo = descarga.titulo)
                         recursos.getString(R.string.galeria_guardado)
                     } catch (e: Exception) {
                         recursos.getString(R.string.galeria_error)
