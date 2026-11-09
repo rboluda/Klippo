@@ -165,4 +165,26 @@
     <string name="descarga_completada">Completada</string>
     <string name="descarga_cancelada">Cancelada</string>
     <string name="descarga_fallida">Error: %1$s</string>
+
+    <!-- Listas de reproducción y carruseles -->
+    <string name="descarga_progreso_lista">%1$d %% · %2$d de %3$d</string>
+    <plurals name="notif_lista_completada">
+        <item quantity="one">Lista descargada: %1$d archivo</item>
+        <item quantity="other">Lista descargada: %1$d archivos</item>
+    </plurals>
+    <plurals name="lista_videos">
+        <item quantity="one">%1$d vídeo</item>
+        <item quantity="other">%1$d vídeos</item>
+    </plurals>
+    <plurals name="lista_canciones">
+        <item quantity="one">%1$d canción</item>
+        <item quantity="other">%1$d canciones</item>
+    </plurals>
+    <string name="lista_guardar_todo">Guardar todo</string>
+    <string name="lista_guardando">Guardando %1$d de %2$d…</string>
+    <string name="lista_compartir_todo">Compartir todo</string>
+    <string name="lista_ver">Ver uno a uno</string>
+    <string name="lista_ocultar">Ocultar</string>
+    <string name="lista_guardada">Guardado en la galería, en la carpeta Klippo/%1$s</string>
+    <string name="lista_guardada_errores">Guardados %1$d de %2$d en la carpeta Klippo/%3$s</string>
 </resources>

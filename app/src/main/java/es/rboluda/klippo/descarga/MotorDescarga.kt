@@ -30,6 +30,17 @@ sealed interface EstadoMotor {
 
 enum class ResultadoActualizacion { ACTUALIZADO, YA_AL_DIA, ERROR }
 
+// Avance de una descarga. [progreso] va de 0 a 1 sobre el total: en una lista o carrusel
+// cuenta todos sus elementos; [elemento] es el que se está bajando (de 1 a [total]) y
+// [total] es 0 si el enlace es de un solo vídeo.
+data class Avance(val progreso: Float, val etaSegundos: Long, val elemento: Int = 0, val total: Int = 0)
+
+// Lo que deja una descarga: los archivos en orden, el título de cada uno y, si era una lista
+// de reproducción o un carrusel, su nombre
+data class ResultadoDescarga(val archivos: List<File>, val titulos: Map<String, String>, val lista: String?) {
+    fun titulo(archivo: File): String? = titulos[archivo.name]
+}
+
 // Envoltorio sobre youtubedl-android para que el resto de la app no dependa de él
 class MotorDescarga(private val context: Context) {
 
@@ -54,7 +65,8 @@ class MotorDescarga(private val context: Context) {
         estado.first { it !is EstadoMotor.Iniciando } is EstadoMotor.Listo
 
     // Descarga el vídeo en [carpeta] y devuelve los archivos resultantes, en orden: uno
-    // normalmente, varios si es un carrusel de Instagram o X (video-1.mp4, video-2.mp4…).
+    // normalmente, varios si es una lista de reproducción o un carrusel de Instagram o X
+    // (video-1.mp4, video-2.mp4…).
     // Bloquea hasta terminar; se cancela con cancelar(id), que lanza CanceledException.
     suspend fun descargar(
         id: String,
@@ -63,8 +75,8 @@ class MotorDescarga(private val context: Context) {
         // Cookies de sesión (Instagram, X) si el usuario ha iniciado sesión
         cookies: File?,
         calidad: Calidad,
-        alProgreso: (progreso: Float, etaSegundos: Long) -> Unit,
-    ): List<File> = withContext(Dispatchers.IO) {
+        alProgreso: (Avance) -> Unit,
+    ): ResultadoDescarga = withContext(Dispatchers.IO) {
         check(esperarListo()) { context.getString(R.string.motor_no_listo) }
         carpeta.mkdirs()
         val formatoNormal = if (calidad.soloAudio) null else formato(calidad.alturaMax, esTikTok(url))
@@ -86,7 +98,13 @@ class MotorDescarga(private val context: Context) {
         if (!calidad.soloAudio && archivos.size == 1 && !tieneAudio(archivos.first())) {
             anadirAudioAparte(id, url, carpeta, cookies, archivos.first(), alProgreso)
         }
-        archivos
+        val datos = leerDatos(carpeta)
+        ResultadoDescarga(
+            archivos = archivos,
+            titulos = datos.mapNotNull { (ruta, d) -> d.second?.let { File(ruta).name to it } }.toMap(),
+            // El nombre de la lista solo interesa si de verdad hay varios archivos
+            lista = if (archivos.size > 1) datos.values.firstNotNullOfOrNull { it.first } else null,
+        )
     }
 
     // Descarga solo el audio del enlace y lo une a [video] (imagen copiada tal cual, audio en AAC
@@ -97,7 +115,7 @@ class MotorDescarga(private val context: Context) {
         carpeta: File,
         cookies: File?,
         video: File,
-        alProgreso: (progreso: Float, etaSegundos: Long) -> Unit,
+        alProgreso: (Avance) -> Unit,
     ) {
         val temporal = File(carpeta, "audio-aparte").apply { mkdirs() }
         try {
@@ -108,7 +126,7 @@ class MotorDescarga(private val context: Context) {
                 cookies?.let { addOption("--cookies", it.absolutePath) }
             }
             YoutubeDL.getInstance().execute(peticion, id) { progreso, eta, _ ->
-                alProgreso((progreso / 100f).coerceIn(0f, 1f), eta)
+                alProgreso(Avance((progreso / 100f).coerceIn(0f, 1f), eta))
             }
             val audio = temporal.listFiles()?.firstOrNull { it.isFile && it.length() > 0 } ?: return
             val unido = File(temporal, "unido.mp4")
@@ -143,7 +161,7 @@ class MotorDescarga(private val context: Context) {
         cookies: File?,
         calidad: Calidad,
         formatoVideo: String?,
-        alProgreso: (progreso: Float, etaSegundos: Long) -> Unit,
+        alProgreso: (Avance) -> Unit,
     ) {
         val peticion = YoutubeDLRequest(url).apply {
             if (formatoVideo == null) {
@@ -151,10 +169,10 @@ class MotorDescarga(private val context: Context) {
                 addOption("-f", "bestaudio[ext=m4a]/bestaudio")
                 addOption("-x")
                 addOption("--audio-format", "m4a")
-                // La imagen del vídeo sirve de miniatura (el audio no tiene fotogramas)
+                // La imagen del vídeo sirve de miniatura (el audio no tiene fotogramas): se
+                // guarda con el mismo nombre que el audio (video.jpg, video-2.jpg…)
                 addOption("--write-thumbnail")
                 addOption("--convert-thumbnails", "jpg")
-                addOption("-o", "thumbnail:" + File(carpeta, "miniatura.%(ext)s").absolutePath)
             } else {
                 addOption("-f", formatoVideo)
                 // Si solo hay WebM/MKV, se cambia el contenedor a MP4 sin recodificar
@@ -166,21 +184,56 @@ class MotorDescarga(private val context: Context) {
                 addOption("--yes-playlist")
                 addOption("--playlist-items", "1:$MAX_CARRUSEL")
             } else {
-                // YouTube y demás: solo el vídeo del enlace, aunque sea de una lista
+                // YouTube y demás: solo el vídeo del enlace, aunque sea de una lista. Si el
+                // enlace es directamente de una lista, se baja entera (hasta MAX_LISTA)
                 addOption("--no-playlist")
+                addOption("--playlist-items", "1:$MAX_LISTA")
             }
+            // En una lista, un vídeo privado o borrado no debe parar los demás
+            addOption("--ignore-errors")
             addOption("--no-mtime")
             // video.mp4 si es uno solo; video-1.mp4, video-2.mp4… si es un carrusel
             addOption("-o", File(carpeta, "video%(playlist_index&-{}|)s.%(ext)s").absolutePath)
             // yt-dlp las lee y, al terminar, guarda en el mismo archivo las que se renueven
             cookies?.let { addOption("--cookies", it.absolutePath) }
-            // Guarda el título al terminar (after_move no activa el modo simulación)
+            // Al terminar cada archivo guarda su ruta, el nombre de la lista (vacío si no es
+            // una lista) y el título, separados por tabuladores (after_move no activa el modo
+            // simulación)
             addCommands(
-                listOf("--print-to-file", "after_move:%(title)s", File(carpeta, ARCHIVO_TITULO).absolutePath)
+                listOf(
+                    "--print-to-file",
+                    "after_move:%(filepath)s\t%(playlist_title|)s\t%(title)s",
+                    File(carpeta, ARCHIVO_TITULO).absolutePath,
+                )
             )
         }
-        YoutubeDL.getInstance().execute(peticion, id) { progreso, eta, _ ->
-            alProgreso((progreso / 100f).coerceIn(0f, 1f), eta)
+        // yt-dlp anuncia cada elemento de una lista con "[download] Downloading item 3 of 10";
+        // el porcentaje que da es el del archivo en curso y aquí se pasa a porcentaje total
+        var elemento = 0
+        var total = 0
+        try {
+            YoutubeDL.getInstance().execute(peticion, id) { progreso, eta, linea ->
+                val nuevo = ELEMENTO_DE_LISTA.find(linea)
+                if (nuevo != null) {
+                    elemento = nuevo.groupValues[1].toInt()
+                    total = nuevo.groupValues[2].toInt()
+                }
+                val avance = if (total > 1) {
+                    // Al empezar un elemento, el porcentaje aún es el del anterior (100 %)
+                    val delArchivo = if (nuevo != null) 0f else (progreso / 100f).coerceIn(0f, 1f)
+                    Avance(((elemento - 1) + delArchivo) / total, -1, elemento, total)
+                } else {
+                    Avance((progreso / 100f).coerceIn(0f, 1f), eta)
+                }
+                alProgreso(avance)
+            }
+        } catch (e: YoutubeDL.CanceledException) {
+            throw e
+        } catch (e: Exception) {
+            // Con --ignore-errors, yt-dlp acaba con error si algún elemento de la lista ha
+            // fallado: si se han bajado los demás, se dan por buenos
+            val hayArchivos = carpeta.listFiles { f -> f.extension in EXTENSIONES }?.isNotEmpty() == true
+            if (total <= 1 || !hayArchivos) throw e
         }
     }
 
@@ -210,10 +263,15 @@ class MotorDescarga(private val context: Context) {
     private fun esTikTok(url: String): Boolean =
         url.toUri().host?.lowercase()?.let { it == "tiktok.com" || it.endsWith(".tiktok.com") } == true
 
-    // Un título por línea (uno por vídeo si es un carrusel)
-    fun leerTitulos(carpeta: File): List<String> =
-        File(carpeta, ARCHIVO_TITULO).takeIf { it.exists() }?.readLines()
-            ?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
+    // Datos que deja yt-dlp de cada archivo: ruta → (nombre de la lista, título)
+    private fun leerDatos(carpeta: File): Map<String, Pair<String?, String?>> =
+        File(carpeta, ARCHIVO_TITULO).takeIf { it.exists() }?.readLines().orEmpty()
+            .mapNotNull { linea ->
+                val partes = linea.split('\t', limit = 3)
+                if (partes.size < 3) return@mapNotNull null
+                partes[0].trim() to (partes[1].trim().ifEmpty { null } to partes[2].trim().ifEmpty { null })
+            }
+            .toMap()
 
     fun cancelar(id: String) {
         YoutubeDL.getInstance().destroyProcessById(id)
@@ -240,8 +298,15 @@ class MotorDescarga(private val context: Context) {
         // Archivos finales posibles: vídeo MP4 o solo audio M4A
         val EXTENSIONES = setOf("mp4", "m4a")
 
-        // Máximo de vídeos que se bajan de un carrusel
+        // Máximo de vídeos que se bajan de un carrusel y de una lista de reproducción
         private const val MAX_CARRUSEL = 20
+        private const val MAX_LISTA = 100
+
+        private val ELEMENTO_DE_LISTA = Regex("""Downloading (?:item|video) (\d+) of (\d+)""")
+
+        // Miniatura que yt-dlp guarda junto a un audio (video-2.m4a → video-2.jpg)
+        fun miniaturaDescargada(archivo: File): File =
+            File(archivo.parentFile, archivo.nameWithoutExtension + ".jpg")
 
         /**
          * Mejor calidad en MP4, prefiriendo H.264 (se comparte y edita sin problemas); si no

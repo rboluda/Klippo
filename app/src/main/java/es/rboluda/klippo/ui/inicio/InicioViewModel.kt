@@ -34,6 +34,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import es.rboluda.klippo.almacenamiento.GuardarEnGaleria
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
@@ -129,6 +131,46 @@ class InicioViewModel(private val app: KlippoApp) : ViewModel() {
 
     fun cancelar(id: String) {
         DescargaService.cancelar(app, id)
+    }
+
+    // Listas que se están guardando en la galería: grupo → archivos guardados hasta ahora
+    private val _guardandoListas = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val guardandoListas: StateFlow<Map<String, Int>> = _guardandoListas.asStateFlow()
+
+    /**
+     * Guarda en la galería todos los vídeos (o canciones) de una lista, dentro de una carpeta
+     * con el nombre de la lista y cada archivo con su título: Movies/Klippo/<lista>/<título>.mp4
+     * (o Music/… si es audio). Se hace aquí y no en la tarjeta para que siga aunque se cambie
+     * de pantalla.
+     */
+    fun guardarLista(grupo: String) {
+        if (grupo in _guardandoListas.value) return
+        val elementos = descargas.value
+            .filter { it.grupo == grupo && it.estado == EstadoDescarga.Completada }
+            .sortedByDescending { it.creado }
+        val lista = elementos.firstOrNull()?.lista ?: return
+        _guardandoListas.update { it + (grupo to 0) }
+        viewModelScope.launch {
+            var guardados = 0
+            elementos.forEachIndexed { i, descarga ->
+                val archivo = descarga.archivo
+                if (archivo != null) {
+                    val titulo = descarga.titulo ?: "$lista ${i + 1}"
+                    runCatching { GuardarEnGaleria.guardar(app, archivo, lista, titulo) }
+                        .onSuccess { guardados++ }
+                }
+                _guardandoListas.update { it + (grupo to i + 1) }
+            }
+            _guardandoListas.update { it - grupo }
+            val carpeta = GuardarEnGaleria.nombreValido(lista).orEmpty()
+            _avisos.send(
+                if (guardados == elementos.size) {
+                    app.getString(R.string.lista_guardada, carpeta)
+                } else {
+                    app.getString(R.string.lista_guardada_errores, guardados, elementos.size, carpeta)
+                }
+            )
+        }
     }
 
     fun debePedirPermisoNotificaciones(): Boolean = PermisoNotificaciones.debePedir(app)

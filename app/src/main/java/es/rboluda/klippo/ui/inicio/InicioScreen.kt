@@ -94,6 +94,9 @@ fun InicioScreen(
     val diasMotor by viewModel.diasMotor.collectAsStateWithLifecycle()
     val vista by viewModel.vista.collectAsStateWithLifecycle()
     val actualizacion by viewModel.actualizacion.collectAsStateWithLifecycle()
+    val guardandoListas by viewModel.guardandoListas.collectAsStateWithLifecycle()
+    // Listas desplegadas (por grupo); plegadas al abrir la app
+    var desplegadas by rememberSaveable { mutableStateOf(listOf<String>()) }
     var url by rememberSaveable { mutableStateOf("") }
     var urlPendiente by rememberSaveable { mutableStateOf<String?>(null) }
     val snackbar = remember { SnackbarHostState() }
@@ -307,16 +310,48 @@ fun InicioScreen(
                         onAbrir = { onAbrir(descarga.id) },
                     )
                 }
+                // Las listas se muestran como una sola tarjeta; al desplegarla aparecen sus
+                // vídeos debajo. "Elementos" es lo que se pinta: tarjetas de lista y descargas
+                val entradas = remember(descargas) { agrupar(descargas) }
+                val elementos = entradas.flatMap { entrada ->
+                    when (entrada) {
+                        is EntradaInicio.Unica -> listOf(entrada)
+                        is EntradaInicio.Lista -> listOf(entrada) +
+                            if (entrada.grupo in desplegadas) entrada.elementos.map { EntradaInicio.Unica(it) } else emptyList()
+                    }
+                }
+                val tarjetaLista: @Composable (EntradaInicio.Lista) -> Unit = { lista ->
+                    TarjetaLista(
+                        lista = lista,
+                        desplegada = lista.grupo in desplegadas,
+                        guardados = guardandoListas[lista.grupo],
+                        onDesplegar = {
+                            desplegadas = if (lista.grupo in desplegadas) {
+                                desplegadas - lista.grupo
+                            } else {
+                                desplegadas + lista.grupo
+                            }
+                        },
+                        onGuardarTodo = { viewModel.guardarLista(lista.grupo) },
+                    )
+                }
+                // Los vídeos de una lista desplegada van un poco metidos
+                val sangria = { d: Descarga -> if (d.grupo != null) Modifier.padding(start = 16.dp) else Modifier }
                 when (vista) {
                     Vista.LISTA -> LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(bottom = 16.dp),
                     ) {
-                        items(descargas, key = { it.id }) { fila(it) }
+                        items(elementos, key = { it.clave }) { entrada ->
+                            when (entrada) {
+                                is EntradaInicio.Lista -> tarjetaLista(entrada)
+                                is EntradaInicio.Unica -> Box(sangria(entrada.descarga)) { fila(entrada.descarga) }
+                            }
+                        }
                     }
-                    // En mosaico, las descargas en curso o con error ocupan toda la fila
-                    // (necesitan barra de progreso y botones); las completadas, una ficha
+                    // En mosaico, las descargas en curso o con error y las listas ocupan toda
+                    // la fila (necesitan barra de progreso y botones); las completadas, una ficha
                     Vista.MOSAICO -> LazyVerticalGrid(
                         columns = GridCells.Adaptive(minSize = 140.dp),
                         modifier = Modifier.fillMaxSize(),
@@ -325,16 +360,23 @@ fun InicioScreen(
                         contentPadding = PaddingValues(bottom = 16.dp),
                     ) {
                         itemsGrid(
-                            descargas,
-                            key = { it.id },
-                            span = { d ->
-                                GridItemSpan(if (d.estado == EstadoDescarga.Completada) 1 else maxLineSpan)
+                            elementos,
+                            key = { it.clave },
+                            span = { e ->
+                                val ficha = e is EntradaInicio.Unica && e.descarga.estado == EstadoDescarga.Completada
+                                GridItemSpan(if (ficha) 1 else maxLineSpan)
                             },
-                        ) { descarga ->
-                            if (descarga.estado == EstadoDescarga.Completada) {
-                                FichaMosaico(descarga, onAbrir = { onAbrir(descarga.id) })
-                            } else {
-                                fila(descarga)
+                        ) { entrada ->
+                            when (entrada) {
+                                is EntradaInicio.Lista -> tarjetaLista(entrada)
+                                is EntradaInicio.Unica -> {
+                                    val descarga = entrada.descarga
+                                    if (descarga.estado == EstadoDescarga.Completada) {
+                                        FichaMosaico(descarga, onAbrir = { onAbrir(descarga.id) })
+                                    } else {
+                                        fila(descarga)
+                                    }
+                                }
                             }
                         }
                     }

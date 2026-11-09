@@ -54,6 +54,10 @@ gallery with files you only wanted to forward once. Klippo does the opposite:
 **Download**
 - YouTube, TikTok, X, Instagram and Facebook (and many more sites thanks to yt-dlp).
 - Instagram and X carousels: every video in the post is downloaded, each on its own.
+- Playlists (up to 100 videos or songs), with a progress bar for the whole list. The playlist
+  stays in a single card so you can handle it at once: *Save all* creates a folder in the
+  gallery named after the playlist, with each file named after its title, and *Share all*
+  sends everything in one go. You can also expand it to see each video on its own.
 - Paste the link (it's filled in from the clipboard automatically) or use *Share → Klippo*
   from the source app: Klippo downloads the video and opens the editor when it's done.
 - When each download finishes, the notification offers *WhatsApp*, *Share* and *Save*.

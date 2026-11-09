@@ -54,6 +54,10 @@ lo contrario:
 **Descargar**
 - YouTube, TikTok, X, Instagram y Facebook (y muchas webs más gracias a yt-dlp).
 - Carruseles de Instagram y X: se descargan todos sus vídeos, cada uno por separado.
+- Listas de reproducción (hasta 100 vídeos o canciones), con una barra de progreso del total.
+  La lista queda en una sola tarjeta para tratarla en bloque: *Guardar todo* crea en la
+  galería una carpeta con el nombre de la lista y cada archivo con su título, y *Compartir
+  todo* lo envía de una vez. También se puede desplegar para ver cada vídeo por separado.
 - Pega el enlace (se autorrellena desde el portapapeles) o usa *Compartir → Klippo* desde
   la app de origen: Klippo descarga el vídeo y, al terminar, abre el editor.
 - Al acabar cada descarga, la notificación trae *WhatsApp*, *Compartir* y *Guardar*.

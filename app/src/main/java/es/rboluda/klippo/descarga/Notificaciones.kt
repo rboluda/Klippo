@@ -54,7 +54,15 @@ object Notificaciones {
             .setSmallIcon(R.drawable.ic_notificacion)
             .setContentTitle(titulo)
             .setContentText(descarga.titulo ?: descarga.url)
-            .setSubText(if (descarga.progreso >= 0f) "$porcentaje %" else null)
+            .setSubText(
+                when {
+                    descarga.progreso < 0f -> null
+                    // Lista: porcentaje del total y elemento en curso ("40 % · 4/10")
+                    descarga.totalElementos > 1 ->
+                        "$porcentaje % · ${descarga.elemento}/${descarga.totalElementos}"
+                    else -> "$porcentaje %"
+                }
+            )
             .setProgress(100, porcentaje.coerceAtLeast(0), descarga.progreso < 0f)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -66,12 +74,19 @@ object Notificaciones {
     }
 
     // Aviso final (completada o con error), útil cuando se comparte desde otra app
-    fun mostrarTerminada(context: Context, descarga: Descarga) {
+    // [elementos]: vídeos de la lista si la descarga era una lista o un carrusel
+    fun mostrarTerminada(context: Context, descarga: Descarga, elementos: Int = 1) {
         val gestor = context.getSystemService(NotificationManager::class.java)
         if (!gestor.areNotificationsEnabled()) return
+        val esLista = descarga.estado == EstadoDescarga.Completada && elementos > 1
         val (titulo, texto) = when (val estado = descarga.estado) {
-            EstadoDescarga.Completada ->
+            // Lista: su nombre y cuántos vídeos tiene; se gestiona en bloque desde la app
+            EstadoDescarga.Completada -> if (esLista) {
+                context.resources.getQuantityString(R.plurals.notif_lista_completada, elementos, elementos) to
+                    (descarga.lista ?: descarga.url)
+            } else {
                 context.getString(R.string.notif_completada) to (descarga.titulo ?: descarga.url)
+            }
             is EstadoDescarga.Fallida ->
                 context.getString(R.string.notif_fallida) to estado.mensaje
             else -> return
@@ -82,7 +97,7 @@ object Notificaciones {
             .setContentText(texto)
             .setAutoCancel(true)
         val archivo = descarga.archivo
-        if (descarga.estado == EstadoDescarga.Completada && archivo != null) {
+        if (descarga.estado == EstadoDescarga.Completada && archivo != null && !esLista) {
             // Tocar la notificación abre el vídeo en el editor
             constructor.setContentIntent(abrirApp(context, descarga.id))
             accionesRapidas(context, descarga.id, archivo, descarga.titulo).forEach(constructor::addAction)

@@ -17,15 +17,31 @@ object GuardarEnGaleria {
 
     private val FORMATO_FECHA = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
 
-    suspend fun guardar(context: Context, archivo: File): Uri = withContext(Dispatchers.IO) {
+    // Caracteres que no admiten los nombres de archivo y carpeta
+    private val NO_VALIDOS = Regex("""[\\/:*?"<>|\p{Cntrl}]""")
+    private val ESPACIOS = Regex("""\s+""")
+
+    /**
+     * Guarda [archivo] en la galería. Sin más datos queda como klippo_<fecha>.mp4 en la carpeta
+     * Klippo; con [subcarpeta] (el nombre de una lista) va dentro de Klippo/<subcarpeta> y con
+     * [titulo] el archivo se llama como el vídeo. Si ya existe uno igual, Android le añade (1).
+     */
+    suspend fun guardar(
+        context: Context,
+        archivo: File,
+        subcarpeta: String? = null,
+        titulo: String? = null,
+    ): Uri = withContext(Dispatchers.IO) {
         val audio = archivo.extension == "m4a"
-        val nombre = "klippo_${LocalDateTime.now().format(FORMATO_FECHA)}.${archivo.extension}"
+        val base = titulo?.let(::nombreValido) ?: "klippo_${LocalDateTime.now().format(FORMATO_FECHA)}"
+        val nombre = "$base.${archivo.extension}"
+        val carpeta = "Klippo" + (subcarpeta?.let(::nombreValido)?.let { "/$it" } ?: "")
         val valores = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, nombre)
             put(MediaStore.MediaColumns.MIME_TYPE, Compartir.tipo(archivo))
             put(
                 MediaStore.MediaColumns.RELATIVE_PATH,
-                (if (audio) Environment.DIRECTORY_MUSIC else Environment.DIRECTORY_MOVIES) + "/Klippo",
+                (if (audio) Environment.DIRECTORY_MUSIC else Environment.DIRECTORY_MOVIES) + "/" + carpeta,
             )
             // Oculto para la galería hasta terminar de copiar
             put(MediaStore.MediaColumns.IS_PENDING, 1)
@@ -48,4 +64,9 @@ object GuardarEnGaleria {
             throw e
         }
     }
+
+    // Quita lo que no puede ir en un nombre de archivo y lo acorta; null si no queda nada
+    fun nombreValido(texto: String): String? =
+        texto.replace(NO_VALIDOS, " ").replace(ESPACIOS, " ").trim().trim('.').take(100).trim()
+            .ifEmpty { null }
 }

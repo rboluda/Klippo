@@ -16,6 +16,8 @@ object MetaDescarga {
             .put("url", descarga.url)
             .put("creado", descarga.creado)
             .put("titulo", descarga.titulo)
+            .put("grupo", descarga.grupo)
+            .put("lista", descarga.lista)
         descarga.carpeta.mkdirs()
         File(descarga.carpeta, ARCHIVO).writeText(json.toString())
     }
@@ -34,6 +36,8 @@ object MetaDescarga {
                 carpeta = carpeta,
                 creado = json.optLong("creado", carpeta.lastModified()),
                 titulo = json.optString("titulo").ifBlank { null },
+                grupo = json.optString("grupo").ifBlank { null },
+                lista = json.optString("lista").ifBlank { null },
                 estado = EstadoDescarga.Completada,
                 progreso = 1f,
                 archivo = video,

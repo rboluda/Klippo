@@ -26,6 +26,13 @@ data class Descarga(
     val etaSegundos: Long = -1,
     val archivo: File? = null,
     val miniatura: File? = null,
+    // Lista de reproducción o carrusel: elemento que se está bajando y total (0 = no es lista)
+    val elemento: Int = 0,
+    val totalElementos: Int = 0,
+    // Los vídeos de una misma lista comparten [grupo] (el id de la descarga original) y el
+    // nombre de la lista; null si la descarga es de un solo vídeo
+    val grupo: String? = null,
+    val lista: String? = null,
 ) {
     // Descarga de solo audio (M4A): sin editor, se guarda en Music en vez de en Movies
     val esAudio: Boolean get() = archivo?.extension == "m4a"

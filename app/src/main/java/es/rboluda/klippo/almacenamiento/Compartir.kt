@@ -82,6 +82,23 @@ object Compartir {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
+    // Comparte varios archivos de una vez (una lista entera) con el menú del sistema
+    fun varios(context: Context, archivos: List<File>, titulo: String?) {
+        if (archivos.isEmpty()) return
+        val uris = archivos.map { FileProvider.getUriForFile(context, "${context.packageName}.archivos", it) }
+        val envio = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+            type = archivos.map(::tipo).distinct().singleOrNull() ?: "*/*"
+            putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+            titulo?.let { putExtra(Intent.EXTRA_TITLE, it) }
+            // ClipData con todos los archivos: así el permiso de lectura llega a cada uno
+            clipData = ClipData.newRawUri(titulo, uris.first()).apply {
+                uris.drop(1).forEach { addItem(ClipData.Item(it)) }
+            }
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(envio, titulo))
+    }
+
     // Tipo MIME según la extensión: vídeo MP4 o audio M4A
     fun tipo(archivo: File): String = if (archivo.extension == "m4a") "audio/mp4" else "video/mp4"
 
