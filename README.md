@@ -61,7 +61,8 @@ lo contrario:
 - Pega el enlace (se autorrellena desde el portapapeles) o usa *Compartir → Klippo* desde
   la app de origen: Klippo descarga el vídeo y, al terminar, abre el editor.
 - Al acabar cada descarga, la notificación trae *WhatsApp*, *Compartir* y *Guardar*.
-- Eliges la calidad en cada vídeo: mejor disponible, 1080p, 720p, 480p o **solo audio (M4A)**.
+- Eliges la calidad en cada vídeo: mejor disponible, 1080p, 720p, 480p o **solo audio**, en M4A
+  (el original, sin recodificar) o en MP3 (para aparatos antiguos).
   Prefiere H.264 para que el vídeo se vea y se comparta sin problemas en cualquier móvil.
 - Progreso en una notificación, con opción de cancelar.
 - Para los vídeos que piden sesión (Instagram, X, Facebook) puedes iniciarla una vez desde la propia
@@ -80,7 +81,7 @@ lo contrario:
 **Compartir**
 - Accesos directos en cada vídeo: enviar por WhatsApp, compartir con cualquier app,
   guardar en la galería o editar.
-- *Guardar en galería* crea `Movies/Klippo/<título del vídeo>.mp4` (o `Music/Klippo/…m4a` si es
+- *Guardar en galería* crea `Movies/Klippo/<título del vídeo>.mp4` (o `Music/Klippo/…m4a`/`.mp3` si es
   solo audio, con su carátula, título y artista). Si no lo pulsas, el vídeo nunca sale de Klippo.
 
 **A tu gusto**

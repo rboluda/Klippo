@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
+import es.rboluda.klippo.descarga.MotorDescarga
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -12,7 +13,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 // Copia un archivo de la caché a la galería vía MediaStore (no necesita permisos):
-// los vídeos van a Movies/Klippo y los audios (M4A) a Music/Klippo
+// los vídeos van a Movies/Klippo y los audios (M4A o MP3) a Music/Klippo
 object GuardarEnGaleria {
 
     private val FORMATO_FECHA = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
@@ -33,7 +34,7 @@ object GuardarEnGaleria {
         subcarpeta: String? = null,
         titulo: String? = null,
     ): Uri = withContext(Dispatchers.IO) {
-        val audio = archivo.extension == "m4a"
+        val audio = MotorDescarga.esAudio(archivo)
         val base = (titulo ?: MetaDescarga.leerTitulo(archivo.parentFile))?.let(::nombreValido)
             ?: "klippo_${LocalDateTime.now().format(FORMATO_FECHA)}"
         val nombre = "$base.${archivo.extension}"

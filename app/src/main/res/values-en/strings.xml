@@ -62,7 +62,9 @@
     <string name="calidad_480">Up to 480p</string>
     <string name="calidad_mejor_corta">Best</string>
     <string name="calidad_audio">Audio only (M4A)</string>
-    <string name="calidad_audio_corta">Audio</string>
+    <string name="calidad_audio_corta" translatable="false">M4A</string>
+    <string name="calidad_audio_mp3">Audio only (MP3)</string>
+    <string name="calidad_audio_mp3_corta" translatable="false">MP3</string>
     <string name="vista_mosaico">Show as grid</string>
     <string name="vista_lista">Show as list</string>
 

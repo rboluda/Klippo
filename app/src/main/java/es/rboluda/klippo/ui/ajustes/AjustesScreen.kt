@@ -326,6 +326,10 @@ private fun <T> Segmentos(
                 selected = opcion == seleccionada,
                 onClick = { onElegir(opcion) },
                 shape = SegmentedButtonDefaults.itemShape(index = i, count = opciones.size),
+                // Con muchas opciones (calidades) no cabe la marca de seleccionada
+                icon = {
+                    if (opciones.size <= 4) SegmentedButtonDefaults.Icon(active = opcion == seleccionada)
+                },
                 label = { Text(etiqueta(opcion), maxLines = 1) },
             )
         }

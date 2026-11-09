@@ -61,7 +61,8 @@ gallery with files you only wanted to forward once. Klippo does the opposite:
 - Paste the link (it's filled in from the clipboard automatically) or use *Share → Klippo*
   from the source app: Klippo downloads the video and opens the editor when it's done.
 - When each download finishes, the notification offers *WhatsApp*, *Share* and *Save*.
-- Choose the quality for every video: best available, 1080p, 720p, 480p or **audio only (M4A)**.
+- Choose the quality for every video: best available, 1080p, 720p, 480p or **audio only**, as M4A
+  (the original, not re-encoded) or MP3 (for older devices).
   H.264 is preferred so the video plays and shares without trouble on any phone.
 - Progress in a notification, with a cancel button.
 - For videos that require being signed in (Instagram, X, Facebook) you can sign in once from the app
@@ -81,7 +82,7 @@ gallery with files you only wanted to forward once. Klippo does the opposite:
 **Share**
 - Shortcuts on every video: send via WhatsApp, share with any app, save to the gallery
   or edit.
-- *Save to gallery* creates `Movies/Klippo/<video title>.mp4` (or `Music/Klippo/…m4a` for
+- *Save to gallery* creates `Movies/Klippo/<video title>.mp4` (or `Music/Klippo/…m4a`/`.mp3` for
   audio only, with its cover art, title and artist). If you don't tap it, the video never leaves Klippo.
 
 **Your way**

@@ -24,9 +24,14 @@ enum class Calidad(
     P480(480, R.string.calidad_480, R.string.calidad_480_corta),
     // Solo la pista de audio, en M4A (AAC) sin recodificar
     AUDIO(null, R.string.calidad_audio, R.string.calidad_audio_corta),
+    // Solo audio en MP3: se recodifica (pierde algo), pero lo reproduce cualquier aparato
+    AUDIO_MP3(null, R.string.calidad_audio_mp3, R.string.calidad_audio_mp3_corta),
     ;
 
-    val soloAudio: Boolean get() = this == AUDIO
+    val soloAudio: Boolean get() = this == AUDIO || this == AUDIO_MP3
+
+    // Formato del archivo de audio (solo si soloAudio)
+    val formatoAudio: String get() = if (this == AUDIO_MP3) "mp3" else "m4a"
 }
 
 // Cómo se muestran las descargas en Inicio

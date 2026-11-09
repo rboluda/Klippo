@@ -100,8 +100,12 @@ object Compartir {
         context.startActivity(Intent.createChooser(envio, titulo))
     }
 
-    // Tipo MIME según la extensión: vídeo MP4 o audio M4A
-    fun tipo(archivo: File): String = if (archivo.extension == "m4a") "audio/mp4" else "video/mp4"
+    // Tipo MIME según la extensión: vídeo MP4, audio M4A o MP3
+    fun tipo(archivo: File): String = when (archivo.extension) {
+        "m4a" -> "audio/mp4"
+        "mp3" -> "audio/mpeg"
+        else -> "video/mp4"
+    }
 
     private fun envio(context: Context, video: File, titulo: String?): Intent {
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.archivos", video)

@@ -34,6 +34,6 @@ data class Descarga(
     val grupo: String? = null,
     val lista: String? = null,
 ) {
-    // Descarga de solo audio (M4A): sin editor, se guarda en Music en vez de en Movies
-    val esAudio: Boolean get() = archivo?.extension == "m4a"
+    // Descarga de solo audio (M4A o MP3): sin editor, se guarda en Music en vez de en Movies
+    val esAudio: Boolean get() = archivo?.let(MotorDescarga::esAudio) == true
 }

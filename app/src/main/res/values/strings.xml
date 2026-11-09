@@ -66,7 +66,9 @@
     <string name="calidad_720_corta" translatable="false">720p</string>
     <string name="calidad_480_corta" translatable="false">480p</string>
     <string name="calidad_audio">Solo audio (M4A)</string>
-    <string name="calidad_audio_corta">Audio</string>
+    <string name="calidad_audio_corta" translatable="false">M4A</string>
+    <string name="calidad_audio_mp3">Solo audio (MP3)</string>
+    <string name="calidad_audio_mp3_corta" translatable="false">MP3</string>
     <string name="vista_mosaico">Ver en mosaico</string>
     <string name="vista_lista">Ver en lista</string>
 

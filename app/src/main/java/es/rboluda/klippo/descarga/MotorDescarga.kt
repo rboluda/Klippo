@@ -165,15 +165,24 @@ class MotorDescarga(private val context: Context) {
     ) {
         val peticion = YoutubeDLRequest(url).apply {
             if (formatoVideo == null) {
-                // M4A (AAC) tal cual si existe; si no, FFmpeg lo convierte
-                addOption("-f", "bestaudio[ext=m4a]/bestaudio")
-                addOption("-x")
-                addOption("--audio-format", "m4a")
+                if (calidad.formatoAudio == "mp3") {
+                    // MP3: se parte del mejor audio (sea cual sea) y FFmpeg lo pasa a MP3 VBR de
+                    // la máxima calidad (V0, unos 245 kbps)
+                    addOption("-f", "bestaudio/best")
+                    addOption("-x")
+                    addOption("--audio-format", "mp3")
+                    addOption("--audio-quality", "0")
+                } else {
+                    // M4A (AAC) tal cual si existe; si no, FFmpeg lo convierte
+                    addOption("-f", "bestaudio[ext=m4a]/bestaudio")
+                    addOption("-x")
+                    addOption("--audio-format", "m4a")
+                }
                 // La imagen del vídeo sirve de miniatura (el audio no tiene fotogramas): se
                 // guarda con el mismo nombre que el audio (video.jpg, video-2.jpg…)
                 addOption("--write-thumbnail")
                 addOption("--convert-thumbnails", "jpg")
-                // Esa imagen va también dentro del M4A como carátula (con --write-thumbnail
+                // Esa imagen va también dentro del audio como carátula (con --write-thumbnail
                 // yt-dlp conserva el JPG), junto con título y artista. En una lista, su nombre
                 // pasa a ser el álbum y la posición, el número de pista (si no es una lista,
                 // yt-dlp solo avisa y sigue)
@@ -244,7 +253,7 @@ class MotorDescarga(private val context: Context) {
         } catch (e: Exception) {
             // Con --ignore-errors, yt-dlp acaba con error si algún elemento de la lista ha
             // fallado: si se han bajado los demás, se dan por buenos. En solo audio, si lo que
-            // falla es poner la carátula, el M4A ya está hecho y también vale
+            // falla es poner la carátula, el audio ya está hecho y también vale
             val hayArchivos = carpeta.listFiles { f -> f.extension in EXTENSIONES }?.isNotEmpty() == true
             val aceptable = total > 1 || formatoVideo == null
             if (!aceptable || !hayArchivos) throw e
@@ -309,8 +318,11 @@ class MotorDescarga(private val context: Context) {
     }
 
     companion object {
-        // Archivos finales posibles: vídeo MP4 o solo audio M4A
-        val EXTENSIONES = setOf("mp4", "m4a")
+        // Archivos finales posibles: vídeo MP4 o solo audio M4A o MP3
+        val EXTENSIONES_AUDIO = setOf("m4a", "mp3")
+        val EXTENSIONES = setOf("mp4") + EXTENSIONES_AUDIO
+
+        fun esAudio(archivo: File): Boolean = archivo.extension in EXTENSIONES_AUDIO
 
         // Máximo de vídeos que se bajan de un carrusel y de una lista de reproducción
         private const val MAX_CARRUSEL = 20
