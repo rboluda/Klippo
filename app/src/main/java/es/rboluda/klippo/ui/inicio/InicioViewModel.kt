@@ -156,7 +156,13 @@ class InicioViewModel(private val app: KlippoApp) : ViewModel() {
                 val archivo = descarga.archivo
                 if (archivo != null) {
                     val titulo = descarga.titulo ?: "$lista ${i + 1}"
-                    runCatching { GuardarEnGaleria.guardar(app, archivo, lista, titulo) }
+                    runCatching {
+                        GuardarEnGaleria.guardar(
+                            app, archivo, lista, titulo,
+                            pista = descarga.pista ?: (i + 1),
+                            totalPistas = descarga.totalPistas ?: elementos.size,
+                        )
+                    }
                         .onSuccess { guardados++ }
                 }
                 _guardandoListas.update { it + (grupo to i + 1) }

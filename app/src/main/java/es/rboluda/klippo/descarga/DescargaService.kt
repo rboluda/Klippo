@@ -73,6 +73,8 @@ class DescargaService : Service() {
             titulo = etiquetas?.nombre,
             grupo = etiquetas?.grupo,
             lista = etiquetas?.lista,
+            pista = etiquetas?.pista,
+            totalPistas = etiquetas?.totalPistas,
             enCola = turnos.availablePermits == 0,
         )
         app.descargas.agregar(descarga)
@@ -130,7 +132,7 @@ class DescargaService : Service() {
             withContext(Dispatchers.IO) {
                 // Los demás vídeos pasan a su propia carpeta: una tarjeta por vídeo
                 archivos.drop(1).forEachIndexed { j, archivo ->
-                    separar(descarga, archivo, j + 1, resultado.titulo(archivo), grupo, lista)
+                    separar(descarga, archivo, j + 1, resultado.titulo(archivo), grupo, lista, archivos.size)
                 }
             }
             val primero = archivos.first()
@@ -148,6 +150,9 @@ class DescargaService : Service() {
                     miniatura = miniatura,
                     grupo = grupo,
                     lista = lista,
+                    // En una lista, el primero es la pista 1
+                    pista = if (esLista) 1 else null,
+                    totalPistas = if (esLista) archivos.size else null,
                 )
             }
             app.descargas.buscar(id)?.let { MetaDescarga.escribir(it) }
@@ -216,7 +221,11 @@ class DescargaService : Service() {
         app.descargas.buscar(descarga.id)?.let { MetaDescarga.escribir(it) }
         // Las canciones de Spotify se quieren conservar: sin tener que pulsar "Guardar todo"
         if (etiquetas.guardarEnGaleria) {
-            runCatching { GuardarEnGaleria.guardar(this, archivo, etiquetas.lista, etiquetas.nombre) }
+            runCatching {
+                GuardarEnGaleria.guardar(
+                    this, archivo, etiquetas.lista, etiquetas.nombre, etiquetas.pista, etiquetas.totalPistas,
+                )
+            }
         }
     }
 
@@ -247,6 +256,7 @@ class DescargaService : Service() {
         titulo: String?,
         grupo: String?,
         lista: String?,
+        total: Int,
     ) {
         val id = "${original.id}-${posicion + 1}"
         val carpeta = File(app.carpetaDescargas, id).apply { mkdirs() }
@@ -264,6 +274,8 @@ class DescargaService : Service() {
             miniatura = Miniaturas.obtener(carpeta, destino),
             grupo = grupo,
             lista = lista,
+            pista = posicion + 1,
+            totalPistas = total,
         )
         MetaDescarga.escribir(nueva)
         app.descargas.agregar(nueva)
