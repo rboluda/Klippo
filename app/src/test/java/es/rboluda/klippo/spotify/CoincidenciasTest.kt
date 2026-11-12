@@ -81,6 +81,17 @@ class CoincidenciasTest {
     }
 
     @Test
+    fun guardaAlternativasValidasEnOrden() {
+        val oficial = candidato("Luces del Puerto (Canción de Noche)", "Robots de Lata - Topic", 229, id = "a")
+        val video = candidato("Robots de Lata - Luces del Puerto (Canción de Noche) (Official Music Video)", "Robots de Lata", 268, id = "b")
+        val otra = candidato("Robots de Lata - Mareas de Cobre", "Robots de Lata", 296, id = "c")
+        val r = Coincidencias.evaluar(luces, listOf(otra, video, oficial))
+        assertEquals("a", r.candidato?.id)
+        // La parecida queda de alternativa; la que es otra canción, no
+        assertEquals(listOf("b"), r.alternativas.map { it.id })
+    }
+
+    @Test
     fun otraCancionNoSeEncuentra() {
         val r = Coincidencias.evaluar(luces, listOf(candidato("Robots de Lata - Mareas de Cobre", "Robots de Lata", 296)))
         assertEquals(Similitud.NO_ENCONTRADA, r.similitud)

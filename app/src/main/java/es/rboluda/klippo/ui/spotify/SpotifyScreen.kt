@@ -59,6 +59,8 @@ import es.rboluda.klippo.descarga.EstadoDescarga
 import es.rboluda.klippo.descarga.PermisoNotificaciones
 import es.rboluda.klippo.spotify.Similitud
 import es.rboluda.klippo.ui.inicio.MiniaturaVideo
+import es.rboluda.klippo.ui.inicio.resumirError
+import androidx.compose.material3.LocalContentColor
 
 // Colores de las etiquetas de similitud (el rojo es el de error del tema)
 private val VERDE = Color(0xFF2E9E4F)
@@ -285,6 +287,17 @@ private fun FilaCancion(fila: FilaPista, descarga: Descarga?, descargable: Boole
                 )
             }
             EtiquetaSimilitud(fila.coincidencia?.similitud)
+            // Si no se ha podido bajar (ni con los otros resultados), se dice por qué
+            val estado = descarga?.estado
+            if (estado is EstadoDescarga.Fallida) {
+                Text(
+                    stringResource(R.string.descarga_fallida, resumirError(estado.mensaje)),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         EstadoDescargaCancion(descarga, descargable, onDescargar)
     }
@@ -330,8 +343,14 @@ private fun EstadoDescargaCancion(descarga: Descarga?, descargable: Boolean, onD
                     CircularProgressIndicator(progress = { descarga.progreso }, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                 }
             }
+            // Fallida: el mismo botón, en rojo, para reintentar
             descargable -> IconButton(onClick = onDescargar) {
-                Icon(painterResource(R.drawable.ic_guardar_galeria), stringResource(R.string.inicio_descargar))
+                val fallida = descarga?.estado is EstadoDescarga.Fallida
+                Icon(
+                    painterResource(R.drawable.ic_guardar_galeria),
+                    stringResource(if (fallida) R.string.reintentar else R.string.inicio_descargar),
+                    tint = if (fallida) MaterialTheme.colorScheme.error else LocalContentColor.current,
+                )
             }
         }
     }

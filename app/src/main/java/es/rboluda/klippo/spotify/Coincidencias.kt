@@ -16,7 +16,13 @@ data class CandidatoYoutube(
     val url: String get() = "https://www.youtube.com/watch?v=$id"
 }
 
-data class Coincidencia(val similitud: Similitud, val candidato: CandidatoYoutube?)
+// [alternativas]: los demás resultados que también valen (de mejor a peor), por si el elegido
+// no se puede bajar (p. ej. un vídeo con restricción de edad)
+data class Coincidencia(
+    val similitud: Similitud,
+    val candidato: CandidatoYoutube?,
+    val alternativas: List<CandidatoYoutube> = emptyList(),
+)
 
 /**
  * Elige, entre los resultados de YouTube, el que más se parece a una canción de Spotify y dice
@@ -88,16 +94,14 @@ object Coincidencias {
             abs(duracionMs / 1000.0 - duracionYoutubeSeg) <= TOLERANCIA_IDENTICA
 
     fun evaluar(pista: PistaSpotify, candidatos: List<CandidatoYoutube>): Coincidencia {
-        val evaluados = candidatos.map { it to analizar(pista, it) }
         // Primero la mejor categoría y, dentro de ella, la mejor puntuación
-        val mejor = evaluados.maxWithOrNull(
-            compareBy<Pair<CandidatoYoutube, Analisis>>({ -it.second.similitud.ordinal }, { it.second.puntos })
-        ) ?: return Coincidencia(Similitud.NO_ENCONTRADA, null)
-        return if (mejor.second.similitud == Similitud.NO_ENCONTRADA) {
-            Coincidencia(Similitud.NO_ENCONTRADA, null)
-        } else {
-            Coincidencia(mejor.second.similitud, mejor.first)
-        }
+        val ordenados = candidatos.map { it to analizar(pista, it) }
+            .filter { it.second.similitud != Similitud.NO_ENCONTRADA }
+            .sortedWith(
+                compareBy<Pair<CandidatoYoutube, Analisis>>({ it.second.similitud.ordinal }, { -it.second.puntos })
+            )
+        val mejor = ordenados.firstOrNull() ?: return Coincidencia(Similitud.NO_ENCONTRADA, null)
+        return Coincidencia(mejor.second.similitud, mejor.first, ordenados.drop(1).map { it.first })
     }
 
     private data class Analisis(val similitud: Similitud, val puntos: Double)

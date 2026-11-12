@@ -102,19 +102,19 @@ class DescargaService : Service() {
         val id = descarga.id
         try {
             val cookies = Sesiones.cookiesPara(this, descarga.url)
-            val resultado = app.motor.descargar(
-                id, descarga.url, descarga.carpeta, cookies, descarga.calidad,
-            ) { avance ->
-                // Este callback llega desde el hilo del proceso de yt-dlp
-                app.descargas.actualizar(id) {
-                    it.copy(
-                        progreso = avance.progreso,
-                        etaSegundos = avance.etaSegundos,
-                        elemento = avance.elemento,
-                        totalElementos = avance.total,
-                    )
+            val resultado = descargarConAlternativas(descarga, etiquetas?.alternativas.orEmpty()) { url ->
+                app.motor.descargar(id, url, descarga.carpeta, cookies, descarga.calidad) { avance ->
+                    // Este callback llega desde el hilo del proceso de yt-dlp
+                    app.descargas.actualizar(id) {
+                        it.copy(
+                            progreso = avance.progreso,
+                            etaSegundos = avance.etaSegundos,
+                            elemento = avance.elemento,
+                            totalElementos = avance.total,
+                        )
+                    }
+                    ambito.launch { refrescarNotificacion(id, forzar = false) }
                 }
-                ambito.launch { refrescarNotificacion(id, forzar = false) }
             }
             val archivos = resultado.archivos
             if (etiquetas != null) {
@@ -162,6 +162,35 @@ class DescargaService : Service() {
             app.descargas.buscar(id)?.let(::avisarTerminada)
             detenerSiNoHayTrabajo()
         }
+    }
+
+    /**
+     * Prueba el enlace de la descarga y, si falla, cada una de las [alternativas] (otros vídeos
+     * de YouTube con la misma canción: el primero puede tener restricción de edad, estar
+     * bloqueado en España…). Se queda con el primero que funcione; si fallan todos, el error
+     * es el del primero, que es el que más se parecía.
+     */
+    private suspend fun <T> descargarConAlternativas(
+        descarga: Descarga,
+        alternativas: List<String>,
+        bajar: suspend (url: String) -> T,
+    ): T {
+        var primerError: Exception? = null
+        for (url in listOf(descarga.url) + alternativas) {
+            if (url != descarga.url) {
+                // Se empieza de cero con el siguiente vídeo, conservando meta.json
+                descarga.carpeta.listFiles()?.filter { it.name != "meta.json" }?.forEach { it.deleteRecursively() }
+                app.descargas.actualizar(descarga.id) { it.copy(url = url, progreso = -1f) }
+            }
+            try {
+                return bajar(url)
+            } catch (e: YoutubeDL.CanceledException) {
+                throw e
+            } catch (e: Exception) {
+                if (primerError == null) primerError = e
+            }
+        }
+        throw primerError ?: IllegalStateException()
     }
 
     // Audio de una lista de Spotify: se le ponen los datos y la portada de Spotify
