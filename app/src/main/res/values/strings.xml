@@ -211,6 +211,8 @@
         <item quantity="other">Descargar todas (%1$d)</item>
     </plurals>
     <string name="spotify_descargando_aviso">Descargando: las verás en Inicio, en la tarjeta de la lista</string>
+    <string name="spotify_guardar_galeria">Guardar en la galería al terminar (%1$s)</string>
+    <string name="spotify_descargando_galeria">Descargando: cada canción se guardará sola en la galería al terminar</string>
     <string name="ajustes_spotify_formato">Formato de las canciones de Spotify</string>
     <string name="lista_guardada_errores">Guardados %1$d de %2$d en la carpeta Klippo/%3$s</string>
 </resources>

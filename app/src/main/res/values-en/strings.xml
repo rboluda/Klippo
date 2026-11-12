@@ -203,6 +203,8 @@
         <item quantity="other">Download all (%1$d)</item>
     </plurals>
     <string name="spotify_descargando_aviso">Downloading: you\'ll see them on the home screen, in the playlist card</string>
+    <string name="spotify_guardar_galeria">Save to the gallery when done (%1$s)</string>
+    <string name="spotify_descargando_galeria">Downloading: each song will be saved to the gallery when it\'s done</string>
     <string name="ajustes_spotify_formato">Format for Spotify songs</string>
     <string name="lista_guardada_errores">Saved %1$d of %2$d in the Klippo/%3$s folder</string>
 </resources>

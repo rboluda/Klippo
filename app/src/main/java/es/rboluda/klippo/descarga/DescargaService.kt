@@ -10,6 +10,7 @@ import android.os.SystemClock
 import com.yausername.youtubedl_android.YoutubeDL
 import es.rboluda.klippo.KlippoApp
 import es.rboluda.klippo.ajustes.Calidad
+import es.rboluda.klippo.almacenamiento.GuardarEnGaleria
 import es.rboluda.klippo.almacenamiento.MetaDescarga
 import es.rboluda.klippo.almacenamiento.Miniaturas
 import es.rboluda.klippo.sesion.Sesiones
@@ -213,6 +214,10 @@ class DescargaService : Service() {
             it.copy(estado = EstadoDescarga.Completada, progreso = 1f, archivo = archivo, miniatura = miniatura)
         }
         app.descargas.buscar(descarga.id)?.let { MetaDescarga.escribir(it) }
+        // Las canciones de Spotify se quieren conservar: sin tener que pulsar "Guardar todo"
+        if (etiquetas.guardarEnGaleria) {
+            runCatching { GuardarEnGaleria.guardar(this, archivo, etiquetas.lista, etiquetas.nombre) }
+        }
     }
 
     // Aviso final. En una lista que se baja canción a canción (Spotify) solo se avisa cuando
