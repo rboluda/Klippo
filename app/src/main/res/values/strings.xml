@@ -188,5 +188,29 @@
     <string name="lista_ver">Ver uno a uno</string>
     <string name="lista_ocultar">Ocultar</string>
     <string name="lista_guardada">Guardado en la galería, en la carpeta Klippo/%1$s</string>
+    <string name="lista_descargando">Descargadas %1$d de %2$d</string>
+    <plurals name="lista_con_error">
+        <item quantity="one">%1$d con error</item>
+        <item quantity="other">%1$d con error</item>
+    </plurals>
+    <string name="descarga_en_cola">En cola…</string>
+
+    <!-- Spotify -->
+    <string name="spotify_titulo">Descargar desde Spotify</string>
+    <string name="spotify_leyendo">Leyendo la lista de Spotify…</string>
+    <string name="spotify_error">No se ha podido leer el enlace de Spotify: %1$s</string>
+    <string name="spotify_truncada">Sin cuenta, Spotify solo deja ver las %1$d primeras canciones de las %2$d que tiene esta lista. Se descargarán esas %1$d.</string>
+    <string name="spotify_buscando">Buscando en YouTube: %1$d de %2$d</string>
+    <string name="spotify_buscando_una">Buscando…</string>
+    <string name="spotify_resumen">%1$d idénticas · %2$d parecidas · %3$d no encontradas</string>
+    <string name="spotify_identica">Idéntica</string>
+    <string name="spotify_parecida">Parecida</string>
+    <string name="spotify_no_encontrada">No encontrada</string>
+    <plurals name="spotify_descargar_todas">
+        <item quantity="one">Descargar %1$d canción</item>
+        <item quantity="other">Descargar todas (%1$d)</item>
+    </plurals>
+    <string name="spotify_descargando_aviso">Descargando: las verás en Inicio, en la tarjeta de la lista</string>
+    <string name="ajustes_spotify_formato">Formato de las canciones de Spotify</string>
     <string name="lista_guardada_errores">Guardados %1$d de %2$d en la carpeta Klippo/%3$s</string>
 </resources>

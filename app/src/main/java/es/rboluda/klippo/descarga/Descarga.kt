@@ -33,6 +33,8 @@ data class Descarga(
     // nombre de la lista; null si la descarga es de un solo vídeo
     val grupo: String? = null,
     val lista: String? = null,
+    // Esperando turno: solo se bajan unas pocas a la vez (p. ej. al pedir una lista entera)
+    val enCola: Boolean = false,
 ) {
     // Descarga de solo audio (M4A o MP3): sin editor, se guarda en Music en vez de en Movies
     val esAudio: Boolean get() = archivo?.let(MotorDescarga::esAudio) == true

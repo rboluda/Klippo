@@ -52,8 +52,13 @@ lo contrario:
 ## Qué hace
 
 **Descargar**
-- YouTube, TikTok, X, Instagram y Facebook (y muchas webs más gracias a yt-dlp).
+- YouTube, TikTok, X, Instagram y Facebook (y muchas webs más gracias a yt-dlp), y canciones de Spotify.
 - Carruseles de Instagram y X: se descargan todos sus vídeos, cada uno por separado.
+- **Desde Spotify** (listas, álbumes o canciones, sin cuenta): Klippo lee las canciones, busca
+  cada una en YouTube y te dice si lo encontrado es *idéntico* (verde), *parecido* (amarillo) o
+  no está (rojo). Las bajas de una en una o todas a la vez, solo audio (M4A o MP3), con el
+  título, el intérprete, el álbum, el número de pista y la portada de Spotify. Sin cuenta,
+  Spotify solo deja ver las 100 primeras canciones de una lista (Klippo avisa si hay más).
 - Listas de reproducción (hasta 100 vídeos o canciones), con una barra de progreso del total.
   La lista queda en una sola tarjeta para tratarla en bloque: *Guardar todo* crea en la
   galería una carpeta con el nombre de la lista y cada archivo con su título, y *Compartir

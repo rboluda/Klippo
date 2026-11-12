@@ -9,7 +9,7 @@ object Enlaces {
 
     private val DOMINIOS_SOPORTADOS = listOf(
         "youtube.com", "youtu.be", "tiktok.com", "x.com", "twitter.com", "instagram.com",
-        "facebook.com", "fb.watch", "fb.com",
+        "facebook.com", "fb.watch", "fb.com", "open.spotify.com", "spotify.link",
     )
 
     // Las apps suelen compartir "Mira este vídeo https://..." : se queda solo la URL

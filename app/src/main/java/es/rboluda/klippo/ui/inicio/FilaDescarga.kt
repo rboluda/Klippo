@@ -169,6 +169,7 @@ private fun textoEstado(descarga: Descarga, errorCompleto: Boolean): String = wh
     EstadoDescarga.Descargando -> {
         val porcentaje = (descarga.progreso * 100).toInt()
         when {
+            descarga.enCola -> stringResource(R.string.descarga_en_cola)
             descarga.progreso < 0f -> stringResource(R.string.descarga_analizando)
             // Lista: porcentaje del total y el elemento que se está bajando ("40 % · 4 de 10")
             descarga.totalElementos > 1 -> stringResource(

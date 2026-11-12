@@ -16,6 +16,9 @@ import es.rboluda.klippo.ui.editor.EditorViewModel
 import es.rboluda.klippo.ui.exportar.ExportarScreen
 import es.rboluda.klippo.ui.inicio.InicioScreen
 import es.rboluda.klippo.ui.inicio.InicioViewModel
+import es.rboluda.klippo.ui.spotify.SpotifyScreen
+import es.rboluda.klippo.ui.spotify.SpotifyViewModel
+import android.net.Uri
 
 // Pantallas principales: Inicio → Editor → Exportar; y Ajustes → Acerca de
 object Rutas {
@@ -26,6 +29,9 @@ object Rutas {
     const val EDITOR = "editor/{$ARG_ID}"
     const val EXPORTAR = "exportar/{$ARG_ID}"
 
+    const val SPOTIFY = "spotify?${SpotifyViewModel.ARG_URL}={${SpotifyViewModel.ARG_URL}}"
+
+    fun spotify(url: String) = "spotify?${SpotifyViewModel.ARG_URL}=${Uri.encode(url)}"
     fun editor(id: String) = "editor/$id"
     fun exportar(id: String) = "exportar/$id"
 }
@@ -43,7 +49,14 @@ fun KlippoNavegacion(inicioViewModel: InicioViewModel) {
                     nav.navigate(if (inicioViewModel.esAudio(id)) Rutas.exportar(id) else Rutas.editor(id))
                 },
                 onAjustes = { nav.navigate(Rutas.AJUSTES) },
+                onSpotify = { url -> nav.navigate(Rutas.spotify(url)) },
             )
+        }
+        composable(
+            Rutas.SPOTIFY,
+            arguments = listOf(navArgument(SpotifyViewModel.ARG_URL) { type = NavType.StringType; defaultValue = "" }),
+        ) {
+            SpotifyScreen(onVolver = { nav.popBackStack() })
         }
         composable(Rutas.AJUSTES) {
             AjustesScreen(

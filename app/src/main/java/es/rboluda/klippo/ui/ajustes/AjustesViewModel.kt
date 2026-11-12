@@ -40,12 +40,14 @@ class AjustesViewModel(private val app: KlippoApp) : ViewModel() {
     val calidad = estado(ajustes.calidad, Calidad.MEJOR)
     val vista = estado(ajustes.vista, Vista.LISTA)
     val buscarActualizaciones = estado(ajustes.buscarActualizaciones, true)
+    val spotifyMp3 = estado(ajustes.spotifyMp3, false)
 
     fun elegirTema(valor: Tema) = guardar { ajustes.guardarTema(valor) }
     fun cambiarColoresSistema(valor: Boolean) = guardar { ajustes.guardarColoresSistema(valor) }
     fun cambiarPreguntarCalidad(valor: Boolean) = guardar { ajustes.guardarPreguntarCalidad(valor) }
     fun elegirCalidad(valor: Calidad) = guardar { ajustes.guardarCalidad(valor) }
     fun elegirVista(valor: Vista) = guardar { ajustes.guardarVista(valor) }
+    fun elegirSpotifyMp3(valor: Boolean) = guardar { ajustes.guardarSpotifyMp3(valor) }
     fun cambiarBuscarActualizaciones(valor: Boolean) = guardar { ajustes.guardarBuscarActualizaciones(valor) }
 
     private fun guardar(accion: suspend () -> Unit) {

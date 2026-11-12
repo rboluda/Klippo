@@ -140,4 +140,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     debugImplementation(libs.androidx.compose.ui.tooling)
+
+    // Pruebas unitarias en la JVM (enlaces de Spotify y coincidencias)
+    testImplementation(libs.junit)
 }

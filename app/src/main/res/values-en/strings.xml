@@ -62,9 +62,7 @@
     <string name="calidad_480">Up to 480p</string>
     <string name="calidad_mejor_corta">Best</string>
     <string name="calidad_audio">Audio only (M4A)</string>
-    <string name="calidad_audio_corta" translatable="false">M4A</string>
     <string name="calidad_audio_mp3">Audio only (MP3)</string>
-    <string name="calidad_audio_mp3_corta" translatable="false">MP3</string>
     <string name="vista_mosaico">Show as grid</string>
     <string name="vista_lista">Show as list</string>
 
@@ -182,5 +180,29 @@
     <string name="lista_ver">Show each one</string>
     <string name="lista_ocultar">Hide</string>
     <string name="lista_guardada">Saved to the gallery, in the Klippo/%1$s folder</string>
+    <string name="lista_descargando">Downloaded %1$d of %2$d</string>
+    <plurals name="lista_con_error">
+        <item quantity="one">%1$d failed</item>
+        <item quantity="other">%1$d failed</item>
+    </plurals>
+    <string name="descarga_en_cola">Queued…</string>
+
+    <!-- Spotify -->
+    <string name="spotify_titulo">Download from Spotify</string>
+    <string name="spotify_leyendo">Reading the Spotify playlist…</string>
+    <string name="spotify_error">Couldn\'t read the Spotify link: %1$s</string>
+    <string name="spotify_truncada">Without an account, Spotify only shows the first %1$d of the %2$d songs in this playlist. Those %1$d will be downloaded.</string>
+    <string name="spotify_buscando">Searching YouTube: %1$d of %2$d</string>
+    <string name="spotify_buscando_una">Searching…</string>
+    <string name="spotify_resumen">%1$d identical · %2$d similar · %3$d not found</string>
+    <string name="spotify_identica">Identical</string>
+    <string name="spotify_parecida">Similar</string>
+    <string name="spotify_no_encontrada">Not found</string>
+    <plurals name="spotify_descargar_todas">
+        <item quantity="one">Download %1$d song</item>
+        <item quantity="other">Download all (%1$d)</item>
+    </plurals>
+    <string name="spotify_descargando_aviso">Downloading: you\'ll see them on the home screen, in the playlist card</string>
+    <string name="ajustes_spotify_formato">Format for Spotify songs</string>
     <string name="lista_guardada_errores">Saved %1$d of %2$d in the Klippo/%3$s folder</string>
 </resources>
