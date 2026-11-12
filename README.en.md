@@ -52,8 +52,13 @@ gallery with files you only wanted to forward once. Klippo does the opposite:
 ## What it does
 
 **Download**
-- YouTube, TikTok, X, Instagram and Facebook (and many more sites thanks to yt-dlp).
+- YouTube, TikTok, X, Instagram and Facebook (and many more sites thanks to yt-dlp), plus songs from Spotify.
 - Instagram and X carousels: every video in the post is downloaded, each on its own.
+- **From Spotify** (playlists, albums or songs, no account needed): Klippo reads the songs,
+  searches each one on YouTube and tells you whether the result is *identical* (green),
+  *similar* (yellow) or not found (red). Download them one by one or all at once, audio only
+  (M4A or MP3), with Spotify's title, artist, album, track number and cover art. Without an
+  account, Spotify only shows the first 100 songs of a playlist (Klippo warns you if there are more).
 - Playlists (up to 100 videos or songs), with a progress bar for the whole list. The playlist
   stays in a single card so you can handle it at once: *Save all* creates a folder in the
   gallery named after the playlist, with each file named after its title, and *Share all*

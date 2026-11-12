@@ -11,8 +11,12 @@ import es.rboluda.klippo.R
 import es.rboluda.klippo.ajustes.Calidad
 import es.rboluda.klippo.edicion.Ffmpeg
 import es.rboluda.klippo.sesion.Plataforma
+import es.rboluda.klippo.spotify.CandidatoYoutube
+import org.json.JSONObject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -296,6 +300,111 @@ class MotorDescarga(private val context: Context) {
             }
             .toMap()
 
+    /**
+     * Sustituye los datos del audio (los del vídeo de YouTube) por [etiquetas] y pone [portada]
+     * como carátula, sin recodificar. Si FFmpeg falla, el audio se queda como estaba.
+     */
+    suspend fun etiquetar(audio: File, etiquetas: EtiquetasAudio, portada: File?): Unit = withContext(Dispatchers.IO) {
+        val mp3 = audio.extension == "mp3"
+        val salida = File(audio.parentFile, "etiquetado.${audio.extension}")
+        val datos = listOfNotNull(
+            "title" to etiquetas.titulo,
+            etiquetas.artista?.let { "artist" to it },
+            etiquetas.album?.let { "album" to it },
+            etiquetas.pista?.let { "track" to it.toString() },
+        ).flatMap { (clave, valor) -> listOf("-metadata", "$clave=$valor") }
+        val argumentos = buildList {
+            addAll(listOf("-i", audio.absolutePath))
+            portada?.let { addAll(listOf("-i", it.absolutePath)) }
+            // Solo el audio del original (sin la imagen de YouTube que ya llevaba)
+            addAll(listOf("-map", "0:a:0"))
+            if (portada != null) addAll(listOf("-map", "1:0"))
+            addAll(listOf("-c", "copy", "-map_metadata", "-1"))
+            if (portada != null) {
+                addAll(listOf("-disposition:v:0", "attached_pic"))
+                if (mp3) addAll(listOf("-metadata:s:v", "title=Album cover", "-metadata:s:v", "comment=Cover (front)"))
+            }
+            if (mp3) addAll(listOf("-id3v2_version", "3"))
+            addAll(datos)
+            add(salida.absolutePath)
+        }
+        try {
+            Ffmpeg.ejecutar(context, argumentos, duracionUs = 0, alProgreso = {})
+            if (salida.length() > 0) salida.renameTo(audio)
+        } catch (e: Exception) {
+            // Si lo que falla es la portada, al menos se ponen los datos; si no, tal cual
+            if (portada != null) etiquetar(audio, etiquetas, null)
+        } finally {
+            salida.delete()
+        }
+    }
+
+    /**
+     * Busca en YouTube cada texto de [consultas] (los 5 primeros resultados, sin descargar
+     * nada) y va llamando a [alResultado] según llegan. Se reparten en unos pocos procesos de
+     * yt-dlp con varias búsquedas cada uno: arrancar Python por cada canción sería lentísimo.
+     * Las consultas que fallan se devuelven con la lista vacía.
+     */
+    suspend fun buscarEnYoutube(
+        idProceso: String,
+        consultas: List<String>,
+        alResultado: (consulta: String, candidatos: List<CandidatoYoutube>) -> Unit,
+    ): Unit = withContext(Dispatchers.IO) {
+        check(esperarListo()) { context.getString(R.string.motor_no_listo) }
+        val pendientes = consultas.distinct()
+        val tamano = ((pendientes.size + PROCESOS_BUSQUEDA - 1) / PROCESOS_BUSQUEDA).coerceAtLeast(1)
+        pendientes.chunked(tamano).mapIndexed { i, bloque ->
+            async { buscarBloque("$idProceso-$i", bloque, alResultado) }
+        }.awaitAll()
+    }
+
+    // Detiene una búsqueda en curso (cada proceso lleva el id con su número de bloque)
+    fun cancelarBusqueda(idProceso: String) {
+        repeat(PROCESOS_BUSQUEDA) { YoutubeDL.getInstance().destroyProcessById("$idProceso-$it") }
+    }
+
+    private fun buscarBloque(
+        id: String,
+        consultas: List<String>,
+        alResultado: (String, List<CandidatoYoutube>) -> Unit,
+    ) {
+        val respondidas = mutableSetOf<String>()
+        val peticion = YoutubeDLRequest(consultas.map { "ytsearch$RESULTADOS_BUSQUEDA:$it" }).apply {
+            // Una línea JSON por búsqueda, con los datos básicos de cada vídeo (sin abrirlos)
+            addOption("--dump-single-json")
+            addOption("--flat-playlist")
+            addOption("--ignore-errors")
+            addOption("--no-warnings")
+        }
+        try {
+            YoutubeDL.getInstance().execute(peticion, id) { _, _, linea ->
+                if (!linea.startsWith("{")) return@execute
+                val json = runCatching { JSONObject(linea) }.getOrNull() ?: return@execute
+                // El "id" de la búsqueda es el propio texto buscado
+                val consulta = json.optString("id").takeIf { it in consultas } ?: return@execute
+                val entradas = json.optJSONArray("entries")
+                val candidatos = (0 until (entradas?.length() ?: 0)).mapNotNull { j ->
+                    val e = entradas?.optJSONObject(j) ?: return@mapNotNull null
+                    // Los directos en curso no tienen audio descargable
+                    if (e.optString("live_status") == "is_live") return@mapNotNull null
+                    CandidatoYoutube(
+                        id = e.optString("id").ifBlank { return@mapNotNull null },
+                        titulo = e.optString("title"),
+                        canal = e.optString("channel").ifBlank { e.optString("uploader") }.ifBlank { null },
+                        duracionSeg = e.optDouble("duration").takeUnless { it.isNaN() }?.toInt(),
+                    )
+                }
+                respondidas += consulta
+                alResultado(consulta, candidatos)
+            }
+        } catch (e: YoutubeDL.CanceledException) {
+            throw e
+        } catch (e: Exception) {
+            // Alguna búsqueda ha fallado: las que no han llegado se dan como sin resultados
+        }
+        consultas.filterNot { it in respondidas }.forEach { alResultado(it, emptyList()) }
+    }
+
     fun cancelar(id: String) {
         YoutubeDL.getInstance().destroyProcessById(id)
     }
@@ -327,6 +436,10 @@ class MotorDescarga(private val context: Context) {
         // Máximo de vídeos que se bajan de un carrusel y de una lista de reproducción
         private const val MAX_CARRUSEL = 20
         private const val MAX_LISTA = 100
+
+        // Búsquedas en YouTube: resultados por canción y procesos de yt-dlp en paralelo
+        private const val RESULTADOS_BUSQUEDA = 5
+        private const val PROCESOS_BUSQUEDA = 3
 
         private val ELEMENTO_DE_LISTA = Regex("""Downloading (?:item|video) (\d+) of (\d+)""")
 

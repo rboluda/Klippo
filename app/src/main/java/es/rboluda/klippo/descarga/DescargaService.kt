@@ -18,7 +18,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
@@ -29,6 +32,10 @@ class DescargaService : Service() {
     private val ambito = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val trabajos = mutableMapOf<String, Job>()
     private var ultimaNotificacion = 0L
+
+    // Como mucho unas pocas descargas a la vez: una lista de Spotify entera lanzaría decenas
+    // de procesos de yt-dlp; las demás esperan en cola
+    private val turnos = Semaphore(MAX_SIMULTANEAS)
 
     private val app get() = application as KlippoApp
 
@@ -41,20 +48,31 @@ class DescargaService : Service() {
                 val calidad = intent.getStringExtra(EXTRA_CALIDAD)
                     ?.let { nombre -> Calidad.entries.find { it.name == nombre } }
                     ?: Calidad.MEJOR
-                if (url != null) iniciar(url, calidad) else detenerSiNoHayTrabajo()
+                val id = intent.getStringExtra(EXTRA_ID) ?: nuevoId()
+                val etiquetas = intent.getSerializableExtra(EXTRA_ETIQUETAS, EtiquetasAudio::class.java)
+                if (url != null) iniciar(id, url, calidad, etiquetas) else detenerSiNoHayTrabajo()
             }
-            ACCION_CANCELAR -> intent.getStringExtra(EXTRA_ID)?.let { app.motor.cancelar(it) }
+            ACCION_CANCELAR -> intent.getStringExtra(EXTRA_ID)?.let { id ->
+                app.motor.cancelar(id)
+                // Si aún estaba en cola no hay proceso que parar: se cancela la espera
+                if (app.descargas.buscar(id)?.enCola == true) trabajos[id]?.cancel()
+            }
         }
         return START_NOT_STICKY
     }
 
-    private fun iniciar(url: String, calidad: Calidad) {
-        val id = UUID.randomUUID().toString().substring(0, 8)
+    private fun iniciar(id: String, url: String, calidad: Calidad, etiquetas: EtiquetasAudio?) {
         val descarga = Descarga(
             id = id,
             url = url,
             carpeta = File(app.carpetaDescargas, id),
             calidad = calidad,
+            creado = etiquetas?.creado ?: System.currentTimeMillis(),
+            // Lo que viene de Spotify ya sabe su nombre y su lista desde el principio
+            titulo = etiquetas?.nombre,
+            grupo = etiquetas?.grupo,
+            lista = etiquetas?.lista,
+            enCola = turnos.availablePermits == 0,
         )
         app.descargas.agregar(descarga)
         MetaDescarga.escribir(descarga)
@@ -64,10 +82,23 @@ class DescargaService : Service() {
             Notificaciones.progreso(this, descarga, trabajos.size + 1),
             ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
         )
-        trabajos[id] = ambito.launch { ejecutar(descarga) }
+        trabajos[id] = ambito.launch {
+            try {
+                turnos.withPermit {
+                    app.descargas.actualizar(id) { it.copy(enCola = false) }
+                    ejecutar(descarga, etiquetas)
+                }
+            } catch (e: CancellationException) {
+                // Cancelada mientras esperaba turno
+                app.descargas.actualizar(id) { it.copy(estado = EstadoDescarga.Cancelada, enCola = false) }
+                descarga.carpeta.deleteRecursively()
+                trabajos.remove(id)
+                detenerSiNoHayTrabajo()
+            }
+        }
     }
 
-    private suspend fun ejecutar(descarga: Descarga) {
+    private suspend fun ejecutar(descarga: Descarga, etiquetas: EtiquetasAudio?) {
         val id = descarga.id
         try {
             val cookies = Sesiones.cookiesPara(this, descarga.url)
@@ -86,6 +117,10 @@ class DescargaService : Service() {
                 ambito.launch { refrescarNotificacion(id, forzar = false) }
             }
             val archivos = resultado.archivos
+            if (etiquetas != null) {
+                completarEtiquetado(descarga, archivos.first(), etiquetas)
+                return
+            }
             // Lista o carrusel: todos sus vídeos comparten grupo y nombre de la lista (si
             // yt-dlp no lo da, el título del primero) para tratarlos en bloque
             val esLista = archivos.size > 1
@@ -124,11 +159,48 @@ class DescargaService : Service() {
             }
         } finally {
             trabajos.remove(id)
-            app.descargas.buscar(id)?.let { terminada ->
-                val elementos = terminada.grupo?.let { g -> app.descargas.descargas.value.count { it.grupo == g } } ?: 1
-                Notificaciones.mostrarTerminada(this, terminada, elementos)
-            }
+            app.descargas.buscar(id)?.let(::avisarTerminada)
             detenerSiNoHayTrabajo()
+        }
+    }
+
+    // Audio de una lista de Spotify: se le ponen los datos y la portada de Spotify
+    private suspend fun completarEtiquetado(descarga: Descarga, archivo: File, etiquetas: EtiquetasAudio) {
+        val portada = etiquetas.portada?.let(::File)?.takeIf { it.exists() }
+        app.motor.etiquetar(archivo, etiquetas, portada)
+        val miniatura = withContext(Dispatchers.IO) {
+            val destino = Miniaturas.archivo(descarga.carpeta)
+            val deYoutube = MotorDescarga.miniaturaDescargada(archivo)
+            // La portada de Spotify sustituye a la imagen del vídeo de YouTube
+            if (portada != null) {
+                deYoutube.delete()
+                portada.copyTo(destino, overwrite = true)
+            } else {
+                deYoutube.renameTo(destino)
+            }
+            destino.takeIf { it.exists() }
+        }
+        app.descargas.actualizar(descarga.id) {
+            it.copy(estado = EstadoDescarga.Completada, progreso = 1f, archivo = archivo, miniatura = miniatura)
+        }
+        app.descargas.buscar(descarga.id)?.let { MetaDescarga.escribir(it) }
+    }
+
+    // Aviso final. En una lista que se baja canción a canción (Spotify) solo se avisa cuando
+    // acaba la última, con el total; si no, uno por descarga
+    private fun avisarTerminada(terminada: Descarga) {
+        val grupo = terminada.grupo
+        if (grupo == null) {
+            Notificaciones.mostrarTerminada(this, terminada, 1)
+            return
+        }
+        val delGrupo = app.descargas.descargas.value.filter { it.grupo == grupo }
+        if (delGrupo.any { it.estado == EstadoDescarga.Descargando }) return
+        val completadas = delGrupo.filter { it.estado == EstadoDescarga.Completada }
+        if (completadas.size > 1) {
+            Notificaciones.mostrarTerminada(this, completadas.first(), completadas.size)
+        } else {
+            Notificaciones.mostrarTerminada(this, terminada, 1)
         }
     }
 
@@ -202,13 +274,23 @@ class DescargaService : Service() {
         private const val EXTRA_URL = "url"
         private const val EXTRA_CALIDAD = "calidad"
         private const val EXTRA_ID = "id"
+        private const val EXTRA_ETIQUETAS = "etiquetas"
+        private const val MAX_SIMULTANEAS = 2
 
-        fun descargar(context: Context, url: String, calidad: Calidad) {
+        private fun nuevoId() = UUID.randomUUID().toString().substring(0, 8)
+
+        // Lanza una descarga y devuelve su id. Con [etiquetas] (audio de una lista de Spotify)
+        // el resultado se etiqueta con esos datos y se agrupa con el resto de la lista.
+        fun descargar(context: Context, url: String, calidad: Calidad, etiquetas: EtiquetasAudio? = null): String {
+            val id = nuevoId()
             val intent = Intent(context, DescargaService::class.java)
                 .setAction(ACCION_DESCARGAR)
                 .putExtra(EXTRA_URL, url)
                 .putExtra(EXTRA_CALIDAD, calidad.name)
+                .putExtra(EXTRA_ID, id)
+                .putExtra(EXTRA_ETIQUETAS, etiquetas)
             context.startForegroundService(intent)
+            return id
         }
 
         fun cancelar(context: Context, id: String) {

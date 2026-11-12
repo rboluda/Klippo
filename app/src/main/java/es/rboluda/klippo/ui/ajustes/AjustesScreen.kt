@@ -63,6 +63,7 @@ fun AjustesScreen(
     val preguntarCalidad by viewModel.preguntarCalidad.collectAsStateWithLifecycle()
     val calidad by viewModel.calidad.collectAsStateWithLifecycle()
     val vista by viewModel.vista.collectAsStateWithLifecycle()
+    val spotifyMp3 by viewModel.spotifyMp3.collectAsStateWithLifecycle()
     val buscarActualizaciones by viewModel.buscarActualizaciones.collectAsStateWithLifecycle()
     val estadoMotor by viewModel.estadoMotor.collectAsStateWithLifecycle()
     val actualizandoMotor by viewModel.actualizandoMotor.collectAsStateWithLifecycle()
@@ -132,6 +133,17 @@ fun AjustesScreen(
                     ),
                 ) {
                     Segmentos(Calidad.entries, calidad, { stringResource(it.etiquetaCorta) }, viewModel::elegirCalidad)
+                }
+            }
+            item {
+                // Las canciones de Spotify se bajan de YouTube solo como audio
+                Opcion(titulo = stringResource(R.string.ajustes_spotify_formato)) {
+                    Segmentos(
+                        listOf(false, true),
+                        spotifyMp3,
+                        { stringResource(if (it) R.string.calidad_audio_mp3 else R.string.calidad_audio) },
+                        viewModel::elegirSpotifyMp3,
+                    )
                 }
             }
             item {

@@ -75,6 +75,7 @@ import es.rboluda.klippo.ajustes.Vista
 import es.rboluda.klippo.descarga.Descarga
 import es.rboluda.klippo.descarga.EstadoDescarga
 import es.rboluda.klippo.util.Enlaces
+import es.rboluda.klippo.spotify.EnlacesSpotify
 import es.rboluda.klippo.descarga.EstadoMotor
 import es.rboluda.klippo.sesion.Plataforma
 import es.rboluda.klippo.sesion.SesionActivity
@@ -87,6 +88,8 @@ fun InicioScreen(
     // Abre el editor de una descarga completada
     onAbrir: (id: String) -> Unit = {},
     onAjustes: () -> Unit = {},
+    // Enlace de Spotify: se abre su pantalla (lista de canciones buscadas en YouTube)
+    onSpotify: (url: String) -> Unit = {},
 ) {
     val estadoMotor by viewModel.estadoMotor.collectAsStateWithLifecycle()
     val actualizando by viewModel.actualizando.collectAsStateWithLifecycle()
@@ -134,8 +137,13 @@ fun InicioScreen(
     }
 
     // Pregunta la calidad o, si está desactivado en Ajustes, descarga con la predeterminada
+    // Los enlaces de Spotify van a su propia pantalla
     val prepararDescarga = { enlace: String ->
-        if (preguntarCalidad) urlParaElegir = enlace else lanzarDescarga(enlace, ultimaCalidad)
+        when {
+            EnlacesSpotify.esSpotify(enlace) -> onSpotify(enlace)
+            preguntarCalidad -> urlParaElegir = enlace
+            else -> lanzarDescarga(enlace, ultimaCalidad)
+        }
     }
 
     val empezarDescarga = {
@@ -149,7 +157,7 @@ fun InicioScreen(
     // el editor (el servicio espera a que el motor esté listo si aún está arrancando)
     LaunchedEffect(urlCompartida) {
         urlCompartida?.let {
-            viewModel.abrirEditorAlTerminar(it)
+            if (!EnlacesSpotify.esSpotify(it)) viewModel.abrirEditorAlTerminar(it)
             prepararDescarga(it)
             viewModel.compartidoConsumido()
         }
@@ -333,6 +341,10 @@ fun InicioScreen(
                             }
                         },
                         onGuardarTodo = { viewModel.guardarLista(lista.grupo) },
+                        onCancelar = {
+                            lista.elementos.filter { it.estado == EstadoDescarga.Descargando }
+                                .forEach { viewModel.cancelar(it.id) }
+                        },
                     )
                 }
                 // Los vídeos de una lista desplegada van un poco metidos

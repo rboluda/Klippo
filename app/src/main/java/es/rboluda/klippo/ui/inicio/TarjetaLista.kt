@@ -12,12 +12,14 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
@@ -29,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import es.rboluda.klippo.R
 import es.rboluda.klippo.almacenamiento.Compartir
 import es.rboluda.klippo.descarga.Descarga
+import es.rboluda.klippo.descarga.EstadoDescarga
 
 // Elementos de la pantalla de inicio: una descarga suelta o una lista (playlist o carrusel)
 // que agrupa varias descargas completadas
@@ -79,10 +82,18 @@ fun TarjetaLista(
     guardados: Int?,
     onDesplegar: () -> Unit,
     onGuardarTodo: () -> Unit,
+    // Cancela las que aún se están bajando (listas de Spotify, que se bajan canción a canción)
+    onCancelar: () -> Unit,
 ) {
     val context = LocalContext.current
-    val total = lista.elementos.size
-    val soloAudio = lista.elementos.all { it.esAudio }
+    // Las canceladas ya no cuentan como parte de la lista
+    val elementos = lista.elementos.filter { it.estado != EstadoDescarga.Cancelada }
+    val total = elementos.size
+    val completadas = elementos.filter { it.estado == EstadoDescarga.Completada }
+    val enCurso = elementos.filter { it.estado == EstadoDescarga.Descargando }
+    val fallidas = elementos.count { it.estado is EstadoDescarga.Fallida }
+    // Mientras se baja aún no hay archivo: se cuenta como audio si todas lo son o no se sabe
+    val soloAudio = elementos.all { it.esAudio || it.archivo == null }
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onDesplegar),
         shape = MaterialTheme.shapes.large,
@@ -112,15 +123,36 @@ fun TarjetaLista(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (fallidas > 0) {
+                        Text(
+                            text = pluralStringResource(R.plurals.lista_con_error, fallidas, fallidas),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
                     TextButton(onClick = onDesplegar) {
                         Text(stringResource(if (desplegada) R.string.lista_ocultar else R.string.lista_ver))
                     }
                 }
             }
+            if (enCurso.isNotEmpty()) {
+                // Avance de toda la lista: las terminadas más lo que lleven las que se bajan
+                val avance = (completadas.size + enCurso.sumOf { it.progreso.coerceAtLeast(0f).toDouble() }) /
+                    total.coerceAtLeast(1)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stringResource(R.string.lista_descargando, completadas.size, total),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = onCancelar) { Text(stringResource(R.string.cancelar)) }
+                }
+                LinearProgressIndicator(progress = { avance.toFloat() }, modifier = Modifier.fillMaxWidth())
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilledTonalButton(
                     onClick = onGuardarTodo,
-                    enabled = guardados == null,
+                    enabled = guardados == null && completadas.isNotEmpty(),
                     modifier = Modifier.weight(1f),
                 ) {
                     if (guardados != null) {
@@ -138,9 +170,10 @@ fun TarjetaLista(
                 OutlinedButton(
                     onClick = {
                         // En el orden de la lista (el primero es el más reciente en la pantalla)
-                        val archivos = lista.elementos.sortedByDescending { it.creado }.mapNotNull { it.archivo }
+                        val archivos = completadas.sortedByDescending { it.creado }.mapNotNull { it.archivo }
                         Compartir.varios(context, archivos, lista.nombre)
                     },
+                    enabled = completadas.isNotEmpty(),
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(painterResource(R.drawable.ic_compartir), null, Modifier.size(18.dp))

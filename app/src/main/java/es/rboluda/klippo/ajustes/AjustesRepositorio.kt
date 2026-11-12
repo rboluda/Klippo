@@ -113,6 +113,15 @@ class AjustesRepositorio(private val context: Context) {
         context.almacen.edit { it[clavePreguntarCalidad] = activo }
     }
 
+    // Formato de las canciones de Spotify: false = M4A (original, sin recodificar); true = MP3
+    private val claveSpotifyMp3 = booleanPreferencesKey("spotify_mp3")
+
+    val spotifyMp3: Flow<Boolean> = context.almacen.data.map { it[claveSpotifyMp3] ?: false }
+
+    suspend fun guardarSpotifyMp3(activo: Boolean) {
+        context.almacen.edit { it[claveSpotifyMp3] = activo }
+    }
+
     suspend fun guardarBuscarActualizaciones(activo: Boolean) {
         context.almacen.edit { it[claveBuscarActualizaciones] = activo }
     }
