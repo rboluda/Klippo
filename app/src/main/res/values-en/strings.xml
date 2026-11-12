@@ -205,6 +205,15 @@
     <string name="spotify_descargando_aviso">Downloading: you\'ll see them on the home screen, in the playlist card</string>
     <string name="spotify_guardar_galeria">Save to the gallery when done (%1$s)</string>
     <string name="spotify_descargando_galeria">Downloading: each song will be saved to the gallery when it\'s done</string>
+    <string name="spotify_manual">Picked by hand</string>
+    <string name="spotify_resumen_manual">%1$d by hand</string>
+    <string name="spotify_manual_titulo">Search by hand</string>
+    <string name="spotify_manual_buscar">Search YouTube</string>
+    <string name="spotify_manual_sin_resultados">No results. Try other words.</string>
+    <string name="spotify_manual_enlace">Or paste a YouTube link</string>
+    <string name="spotify_manual_enlace_no_valido">That\'s not a YouTube video link</string>
+    <string name="spotify_manual_comprobando">Checking the link…</string>
+    <string name="spotify_manual_usar_enlace">Use link</string>
     <string name="ajustes_spotify_formato">Format for Spotify songs</string>
     <string name="lista_guardada_errores">Saved %1$d of %2$d in the Klippo/%3$s folder</string>
 </resources>

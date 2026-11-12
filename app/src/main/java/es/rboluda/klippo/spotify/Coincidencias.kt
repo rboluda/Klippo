@@ -4,7 +4,8 @@ import java.text.Normalizer
 import kotlin.math.abs
 
 // Lo parecido que es el resultado de YouTube a la canción de Spotify
-enum class Similitud { IDENTICA, PARECIDA, NO_ENCONTRADA }
+// MANUAL: el usuario lo ha elegido él (buscando a mano o pegando un enlace)
+enum class Similitud { IDENTICA, PARECIDA, NO_ENCONTRADA, MANUAL }
 
 // Un resultado de la búsqueda en YouTube
 data class CandidatoYoutube(
@@ -92,6 +93,9 @@ object Coincidencias {
     fun mismaDuracion(duracionMs: Long, duracionYoutubeSeg: Int?): Boolean =
         duracionYoutubeSeg != null && duracionMs > 0 &&
             abs(duracionMs / 1000.0 - duracionYoutubeSeg) <= TOLERANCIA_IDENTICA
+
+    // Parecido de un solo resultado (para mostrarlo en la búsqueda manual)
+    fun similitud(pista: PistaSpotify, candidato: CandidatoYoutube): Similitud = analizar(pista, candidato).similitud
 
     fun evaluar(pista: PistaSpotify, candidatos: List<CandidatoYoutube>): Coincidencia {
         // Primero la mejor categoría y, dentro de ella, la mejor puntuación

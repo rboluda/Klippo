@@ -213,6 +213,15 @@
     <string name="spotify_descargando_aviso">Descargando: las verás en Inicio, en la tarjeta de la lista</string>
     <string name="spotify_guardar_galeria">Guardar en la galería al terminar (%1$s)</string>
     <string name="spotify_descargando_galeria">Descargando: cada canción se guardará sola en la galería al terminar</string>
+    <string name="spotify_manual">Elegida a mano</string>
+    <string name="spotify_resumen_manual">%1$d a mano</string>
+    <string name="spotify_manual_titulo">Buscar a mano</string>
+    <string name="spotify_manual_buscar">Buscar en YouTube</string>
+    <string name="spotify_manual_sin_resultados">Sin resultados. Prueba con otras palabras.</string>
+    <string name="spotify_manual_enlace">O pega un enlace de YouTube</string>
+    <string name="spotify_manual_enlace_no_valido">No es un enlace de un vídeo de YouTube</string>
+    <string name="spotify_manual_comprobando">Comprobando el enlace…</string>
+    <string name="spotify_manual_usar_enlace">Usar enlace</string>
     <string name="ajustes_spotify_formato">Formato de las canciones de Spotify</string>
     <string name="lista_guardada_errores">Guardados %1$d de %2$d en la carpeta Klippo/%3$s</string>
 </resources>

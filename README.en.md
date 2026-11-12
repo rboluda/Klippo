@@ -57,7 +57,8 @@ gallery with files you only wanted to forward once. Klippo does the opposite:
 - **From Spotify** (playlists, albums or songs, no account needed): Klippo reads the songs,
   searches each one on YouTube and tells you whether the result is *identical* (green),
   *similar* (yellow) or not found (red). Download them one by one or all at once, audio only
-  (M4A or MP3), with Spotify's title, artist, album, track number and cover art. Without an
+  (M4A or MP3), with Spotify's title, artist, album, track number and cover art. Songs it
+  can't find (or that you don't like) can be searched by hand or given a YouTube link. Without an
   account, Spotify only shows the first 100 songs of a playlist (Klippo warns you if there are more).
 - Playlists (up to 100 videos or songs), with a progress bar for the whole list. The playlist
   stays in a single card so you can handle it at once: *Save all* creates a folder in the
