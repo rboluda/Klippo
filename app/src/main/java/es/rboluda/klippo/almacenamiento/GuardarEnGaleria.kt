@@ -26,16 +26,21 @@ object GuardarEnGaleria {
      * Guarda [archivo] en la galería. Sin más datos queda como klippo_<fecha>.mp4 en la carpeta
      * Klippo; con [subcarpeta] (el nombre de una lista) va dentro de Klippo/<subcarpeta> y con
      * [titulo] el archivo se llama como el vídeo (si no se indica, se busca en el meta.json de la
-     * descarga). Si ya existe uno igual, Android le añade (1).
+     * descarga). Con [pista] (de una lista de [totalPistas]) el número va delante para que la
+     * carpeta quede en el orden de la lista: "06 - Artista - Título". Si ya existe uno igual,
+     * Android le añade (1).
      */
     suspend fun guardar(
         context: Context,
         archivo: File,
         subcarpeta: String? = null,
         titulo: String? = null,
+        pista: Int? = null,
+        totalPistas: Int? = null,
     ): Uri = withContext(Dispatchers.IO) {
         val audio = MotorDescarga.esAudio(archivo)
-        val base = (titulo ?: MetaDescarga.leerTitulo(archivo.parentFile))?.let(::nombreValido)
+        val titulado = (titulo ?: MetaDescarga.leerTitulo(archivo.parentFile))?.let(::nombreValido)
+        val base = titulado?.let { prefijoPista(pista, totalPistas) + it }
             ?: "klippo_${LocalDateTime.now().format(FORMATO_FECHA)}"
         val nombre = "$base.${archivo.extension}"
         val carpeta = "Klippo" + (subcarpeta?.let(::nombreValido)?.let { "/$it" } ?: "")
@@ -66,6 +71,13 @@ object GuardarEnGaleria {
             resolver.delete(uri, null, null)
             throw e
         }
+    }
+
+    // "06 - " (al menos dos cifras; tres si la lista llega a 100); vacío si no es de una lista
+    fun prefijoPista(pista: Int?, totalPistas: Int?): String {
+        if (pista == null || pista <= 0) return ""
+        val cifras = maxOf(2, maxOf(pista, totalPistas ?: 0).toString().length)
+        return pista.toString().padStart(cifras, '0') + " - "
     }
 
     // Quita lo que no puede ir en un nombre de archivo y lo acorta; null si no queda nada

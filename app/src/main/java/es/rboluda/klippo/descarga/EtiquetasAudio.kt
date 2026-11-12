@@ -14,6 +14,8 @@ data class EtiquetasAudio(
     val artista: String?,
     val album: String?,
     val pista: Int?,
+    // Canciones de la lista (para numerar 01, 02… o 001 si hay 100)
+    val totalPistas: Int? = null,
     // Ruta local de la portada (JPG) que se incrusta y sirve de miniatura
     val portada: String?,
     val grupo: String?,

@@ -70,7 +70,7 @@ fun FilaDescarga(
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(
-                    text = descarga.titulo ?: descarga.url,
+                    text = textoTitulo(descarga),
                     style = MaterialTheme.typography.titleSmall,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -150,7 +150,7 @@ fun FichaMosaico(descarga: Descarga, onAbrir: () -> Unit) {
                 .clip(RoundedCornerShape(18.dp)),
         )
         Text(
-            text = descarga.titulo ?: descarga.url,
+            text = textoTitulo(descarga),
             style = MaterialTheme.typography.bodySmall,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -209,3 +209,7 @@ private fun pideSesion(mensaje: String): Boolean =
 
 private fun formatearDuracion(segundos: Long): String =
     "%d:%02d".format(segundos / 60, segundos % 60)
+
+// Título de la tarjeta; en una lista lleva delante su número de pista ("6. Título")
+private fun textoTitulo(descarga: Descarga): String =
+    (descarga.pista?.let { "$it. " } ?: "") + (descarga.titulo ?: descarga.url)

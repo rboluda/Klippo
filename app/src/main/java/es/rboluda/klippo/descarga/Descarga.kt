@@ -33,6 +33,9 @@ data class Descarga(
     // nombre de la lista; null si la descarga es de un solo vídeo
     val grupo: String? = null,
     val lista: String? = null,
+    // Posición en la lista (número de pista, desde 1) y cuántas tiene; null si no es de una lista
+    val pista: Int? = null,
+    val totalPistas: Int? = null,
     // Esperando turno: solo se bajan unas pocas a la vez (p. ej. al pedir una lista entera)
     val enCola: Boolean = false,
 ) {

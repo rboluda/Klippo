@@ -18,6 +18,8 @@ object MetaDescarga {
             .put("titulo", descarga.titulo)
             .put("grupo", descarga.grupo)
             .put("lista", descarga.lista)
+            .put("pista", descarga.pista)
+            .put("totalPistas", descarga.totalPistas)
         descarga.carpeta.mkdirs()
         File(descarga.carpeta, ARCHIVO).writeText(json.toString())
     }
@@ -46,6 +48,8 @@ object MetaDescarga {
                 titulo = json.optString("titulo").ifBlank { null },
                 grupo = json.optString("grupo").ifBlank { null },
                 lista = json.optString("lista").ifBlank { null },
+                pista = json.optInt("pista", 0).takeIf { it > 0 },
+                totalPistas = json.optInt("totalPistas", 0).takeIf { it > 0 },
                 estado = EstadoDescarga.Completada,
                 progreso = 1f,
                 archivo = video,

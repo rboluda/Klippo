@@ -162,6 +162,7 @@ class SpotifyViewModel(private val app: KlippoApp, estadoGuardado: SavedStateHan
                 // En una lista, su nombre hace de álbum: el reproductor las agrupa igual que la carpeta
                 album = if (individual) null else lista.lista.nombre,
                 pista = if (individual) null else pista.numero,
+                totalPistas = if (individual) null else lista.lista.pistas.size,
                 portada = lista.portada?.absolutePath,
                 grupo = if (individual) null else "spotify-${lista.lista.enlace.id}-$momento",
                 lista = if (individual) null else lista.lista.nombre,
