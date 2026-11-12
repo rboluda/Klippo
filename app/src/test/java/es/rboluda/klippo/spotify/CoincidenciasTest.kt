@@ -81,6 +81,17 @@ class CoincidenciasTest {
     }
 
     @Test
+    fun guardaAlternativasValidasEnOrden() {
+        val oficial = candidato("Pride (In The Name Of Love)", "U2 - Topic", 229, id = "a")
+        val video = candidato("U2 - Pride (In The Name Of Love) (Official Music Video)", "U2", 268, id = "b")
+        val otra = candidato("U2 - With Or Without You", "U2", 296, id = "c")
+        val r = Coincidencias.evaluar(pride, listOf(otra, video, oficial))
+        assertEquals("a", r.candidato?.id)
+        // La parecida queda de alternativa; la que es otra canción, no
+        assertEquals(listOf("b"), r.alternativas.map { it.id })
+    }
+
+    @Test
     fun otraCancionNoSeEncuentra() {
         val r = Coincidencias.evaluar(pride, listOf(candidato("U2 - With Or Without You", "U2", 296)))
         assertEquals(Similitud.NO_ENCONTRADA, r.similitud)

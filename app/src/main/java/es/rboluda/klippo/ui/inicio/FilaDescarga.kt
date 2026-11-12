@@ -198,7 +198,7 @@ private fun textoEstado(descarga: Descarga, errorCompleto: Boolean): String = wh
 // "Instagram sent an empty media response."
 private val PREFIJO_EXTRACTOR = Regex("""^\[[^\]]+]\s*[^:\s]+:\s*""")
 
-private fun resumirError(mensaje: String): String {
+fun resumirError(mensaje: String): String {
     val sinPrefijo = mensaje.replace(PREFIJO_EXTRACTOR, "")
     val fin = sinPrefijo.indexOf(". ")
     return if (fin > 0) sinPrefijo.substring(0, fin + 1) else sinPrefijo

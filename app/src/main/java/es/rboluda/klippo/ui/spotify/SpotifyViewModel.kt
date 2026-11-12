@@ -157,6 +157,7 @@ class SpotifyViewModel(private val app: KlippoApp, estadoGuardado: SavedStateHan
                 grupo = if (individual) null else "spotify-${lista.lista.enlace.id}-$momento",
                 lista = if (individual) null else lista.lista.nombre,
                 creado = momento - pista.numero,
+                alternativas = fila.coincidencia.alternativas.take(MAX_ALTERNATIVAS).map { it.url },
             )
             pista.id to DescargaService.descargar(app, candidato.url, calidad, etiquetas)
         }.toMap()
@@ -169,6 +170,9 @@ class SpotifyViewModel(private val app: KlippoApp, estadoGuardado: SavedStateHan
 
     companion object {
         const val ARG_URL = "url"
+
+        // Otros resultados que se prueban si el elegido falla
+        private const val MAX_ALTERNATIVAS = 3
 
         fun consulta(pista: PistaSpotify): String =
             listOfNotNull(pista.artistaPrincipal, Coincidencias.tituloBase(pista.titulo)).joinToString(" - ")

@@ -20,4 +20,6 @@ data class EtiquetasAudio(
     val lista: String?,
     // Orden en la lista de Klippo: las canciones de una lista quedan en su orden original
     val creado: Long,
+    // Otros vídeos de YouTube que valen, en orden, por si el primero no se puede bajar
+    val alternativas: List<String> = emptyList(),
 ) : Serializable
