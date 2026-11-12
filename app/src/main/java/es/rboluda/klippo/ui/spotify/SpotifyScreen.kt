@@ -79,6 +79,17 @@ fun SpotifyScreen(
     val descargas by viewModel.descargas.collectAsStateWithLifecycle()
     val mp3 by viewModel.mp3.collectAsStateWithLifecycle()
     val guardarEnGaleria by viewModel.guardarEnGaleria.collectAsStateWithLifecycle()
+    val busquedaManual by viewModel.busquedaManual.collectAsStateWithLifecycle()
+
+    busquedaManual?.let { b ->
+        DialogoBusquedaManual(
+            estado = b,
+            onBuscar = viewModel::buscarManual,
+            onElegir = viewModel::elegirManual,
+            onUsarEnlace = viewModel::usarEnlace,
+            onCerrar = viewModel::cerrarBusquedaManual,
+        )
+    }
     val context = LocalContext.current
 
     // Acción que espera a la respuesta del permiso de notificaciones (se lanza igualmente)
@@ -136,6 +147,7 @@ fun SpotifyScreen(
                     val identicas = filas.count { it.coincidencia?.similitud == Similitud.IDENTICA }
                     val parecidas = filas.count { it.coincidencia?.similitud == Similitud.PARECIDA }
                     val noEncontradas = filas.count { it.coincidencia?.similitud == Similitud.NO_ENCONTRADA }
+                    val aMano = filas.count { it.coincidencia?.similitud == Similitud.MANUAL }
                     val descargables = filas.count { it.descargable(descargas) }
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
@@ -173,7 +185,8 @@ fun SpotifyScreen(
                                     )
                                 } else {
                                     Text(
-                                        stringResource(R.string.spotify_resumen, identicas, parecidas, noEncontradas),
+                                        stringResource(R.string.spotify_resumen, identicas, parecidas, noEncontradas) +
+                                            if (aMano > 0) " · " + stringResource(R.string.spotify_resumen_manual, aMano) else "",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -223,6 +236,7 @@ fun SpotifyScreen(
                                 descarga = fila.idDescarga?.let { descargas[it] },
                                 descargable = fila.descargable(descargas),
                                 onDescargar = { conPermiso { viewModel.descargar(fila.pista.id) } },
+                                onBuscar = { viewModel.abrirBusquedaManual(fila.pista.id) },
                             )
                         }
                     }
@@ -261,7 +275,13 @@ private fun Cabecera(estado: EstadoSpotify.Lista, formato: String) {
 // Una canción: número, título e intérprete de Spotify, lo encontrado en YouTube, la etiqueta
 // de similitud y su descarga. Tocarla abre el vídeo en YouTube para comprobarlo.
 @Composable
-private fun FilaCancion(fila: FilaPista, descarga: Descarga?, descargable: Boolean, onDescargar: () -> Unit) {
+private fun FilaCancion(
+    fila: FilaPista,
+    descarga: Descarga?,
+    descargable: Boolean,
+    onDescargar: () -> Unit,
+    onBuscar: () -> Unit,
+) {
     val context = LocalContext.current
     val candidato = fila.coincidencia?.candidato
     Row(
@@ -291,7 +311,7 @@ private fun FilaCancion(fila: FilaPista, descarga: Descarga?, descargable: Boole
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                fila.pista.artistas.joinToString(", ") + " · " + duracion(fila.pista.duracionMs / 1000),
+                fila.pista.artistas.joinToString(", ") + " · " + duracionTexto(fila.pista.duracionMs / 1000),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -302,7 +322,7 @@ private fun FilaCancion(fila: FilaPista, descarga: Descarga?, descargable: Boole
                     "▶ " + listOfNotNull(
                         candidato.titulo,
                         candidato.canal,
-                        candidato.duracionSeg?.toLong()?.let(::duracion),
+                        candidato.duracionSeg?.toLong()?.let(::duracionTexto),
                     ).joinToString(" · "),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -323,12 +343,27 @@ private fun FilaCancion(fila: FilaPista, descarga: Descarga?, descargable: Boole
                 )
             }
         }
+        // Lupa: buscar a mano o pegar un enlace (sobre todo para las no encontradas), cuando
+        // ya ha terminado la búsqueda automática y no se está bajando
+        if (fila.coincidencia != null && descarga?.estado != EstadoDescarga.Descargando) {
+            IconButton(onClick = onBuscar) {
+                Icon(
+                    painterResource(R.drawable.ic_buscar),
+                    stringResource(R.string.spotify_manual_titulo),
+                    tint = if (fila.coincidencia.similitud == Similitud.NO_ENCONTRADA) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+            }
+        }
         EstadoDescargaCancion(descarga, descargable, onDescargar)
     }
 }
 
 @Composable
-private fun EtiquetaSimilitud(similitud: Similitud?) {
+internal fun EtiquetaSimilitud(similitud: Similitud?) {
     val (texto, color) = when (similitud) {
         null -> return Text(
             stringResource(R.string.spotify_buscando_una),
@@ -338,6 +373,7 @@ private fun EtiquetaSimilitud(similitud: Similitud?) {
         Similitud.IDENTICA -> stringResource(R.string.spotify_identica) to VERDE
         Similitud.PARECIDA -> stringResource(R.string.spotify_parecida) to AMARILLO
         Similitud.NO_ENCONTRADA -> stringResource(R.string.spotify_no_encontrada) to MaterialTheme.colorScheme.error
+        Similitud.MANUAL -> stringResource(R.string.spotify_manual) to MaterialTheme.colorScheme.primary
     }
     Surface(color = color.copy(alpha = 0.16f), shape = RoundedCornerShape(6.dp)) {
         Text(
@@ -380,4 +416,4 @@ private fun EstadoDescargaCancion(descarga: Descarga?, descargable: Boolean, onD
     }
 }
 
-private fun duracion(segundos: Long): String = "%d:%02d".format(segundos / 60, segundos % 60)
+internal fun duracionTexto(segundos: Long): String = "%d:%02d".format(segundos / 60, segundos % 60)

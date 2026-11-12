@@ -354,7 +354,7 @@ class MotorDescarga(private val context: Context) {
         val pendientes = consultas.distinct()
         val tamano = ((pendientes.size + PROCESOS_BUSQUEDA - 1) / PROCESOS_BUSQUEDA).coerceAtLeast(1)
         pendientes.chunked(tamano).mapIndexed { i, bloque ->
-            async { buscarBloque("$idProceso-$i", bloque, alResultado) }
+            async { buscarBloque("$idProceso-$i", bloque, alResultado = alResultado) }
         }.awaitAll()
     }
 
@@ -363,13 +363,53 @@ class MotorDescarga(private val context: Context) {
         repeat(PROCESOS_BUSQUEDA) { YoutubeDL.getInstance().destroyProcessById("$idProceso-$it") }
     }
 
+    // Búsqueda a mano de una sola canción (más resultados que la automática)
+    suspend fun buscarManual(idProceso: String, consulta: String): List<CandidatoYoutube> = withContext(Dispatchers.IO) {
+        check(esperarListo()) { context.getString(R.string.motor_no_listo) }
+        var encontrados = emptyList<CandidatoYoutube>()
+        buscarBloque(idProceso, listOf(consulta), RESULTADOS_MANUAL) { _, candidatos -> encontrados = candidatos }
+        encontrados
+    }
+
+    // Título, canal y duración de un vídeo de YouTube pegado a mano (null si no se puede leer)
+    suspend fun datosVideo(idProceso: String, url: String): CandidatoYoutube? = withContext(Dispatchers.IO) {
+        check(esperarListo()) { context.getString(R.string.motor_no_listo) }
+        val peticion = YoutubeDLRequest(url).apply {
+            addOption("--dump-single-json")
+            addOption("--no-playlist")
+            addOption("--no-warnings")
+        }
+        try {
+            val salida = YoutubeDL.getInstance().execute(peticion, idProceso).out
+            salida.lineSequence().firstOrNull { it.startsWith("{") }
+                ?.let { JSONObject(it) }?.let(::candidatoDe)
+        } catch (e: YoutubeDL.CanceledException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    // Un vídeo de los JSON de yt-dlp (resultado de búsqueda o vídeo suelto)
+    private fun candidatoDe(e: JSONObject): CandidatoYoutube? {
+        // Los directos en curso no tienen audio descargable
+        if (e.optString("live_status") == "is_live") return null
+        return CandidatoYoutube(
+            id = e.optString("id").ifBlank { return null },
+            titulo = e.optString("title"),
+            canal = e.optString("channel").ifBlank { e.optString("uploader") }.ifBlank { null },
+            duracionSeg = e.optDouble("duration").takeUnless { it.isNaN() }?.toInt(),
+        )
+    }
+
     private fun buscarBloque(
         id: String,
         consultas: List<String>,
+        resultados: Int = RESULTADOS_BUSQUEDA,
         alResultado: (String, List<CandidatoYoutube>) -> Unit,
     ) {
         val respondidas = mutableSetOf<String>()
-        val peticion = YoutubeDLRequest(consultas.map { "ytsearch$RESULTADOS_BUSQUEDA:$it" }).apply {
+        val peticion = YoutubeDLRequest(consultas.map { "ytsearch$resultados:$it" }).apply {
             // Una línea JSON por búsqueda, con los datos básicos de cada vídeo (sin abrirlos)
             addOption("--dump-single-json")
             addOption("--flat-playlist")
@@ -384,15 +424,7 @@ class MotorDescarga(private val context: Context) {
                 val consulta = json.optString("id").takeIf { it in consultas } ?: return@execute
                 val entradas = json.optJSONArray("entries")
                 val candidatos = (0 until (entradas?.length() ?: 0)).mapNotNull { j ->
-                    val e = entradas?.optJSONObject(j) ?: return@mapNotNull null
-                    // Los directos en curso no tienen audio descargable
-                    if (e.optString("live_status") == "is_live") return@mapNotNull null
-                    CandidatoYoutube(
-                        id = e.optString("id").ifBlank { return@mapNotNull null },
-                        titulo = e.optString("title"),
-                        canal = e.optString("channel").ifBlank { e.optString("uploader") }.ifBlank { null },
-                        duracionSeg = e.optDouble("duration").takeUnless { it.isNaN() }?.toInt(),
-                    )
+                    entradas?.optJSONObject(j)?.let(::candidatoDe)
                 }
                 respondidas += consulta
                 alResultado(consulta, candidatos)
@@ -439,6 +471,7 @@ class MotorDescarga(private val context: Context) {
 
         // Búsquedas en YouTube: resultados por canción y procesos de yt-dlp en paralelo
         private const val RESULTADOS_BUSQUEDA = 5
+        private const val RESULTADOS_MANUAL = 10
         private const val PROCESOS_BUSQUEDA = 3
 
         private val ELEMENTO_DE_LISTA = Regex("""Downloading (?:item|video) (\d+) of (\d+)""")

@@ -14,7 +14,9 @@ import es.rboluda.klippo.descarga.DescargaService
 import es.rboluda.klippo.descarga.EstadoDescarga
 import es.rboluda.klippo.descarga.EtiquetasAudio
 import es.rboluda.klippo.descarga.PermisoNotificaciones
+import es.rboluda.klippo.spotify.CandidatoYoutube
 import es.rboluda.klippo.spotify.Coincidencia
+import es.rboluda.klippo.spotify.EnlacesYoutube
 import es.rboluda.klippo.spotify.Coincidencias
 import es.rboluda.klippo.spotify.LectorSpotify
 import es.rboluda.klippo.spotify.ListaSpotify
@@ -31,6 +33,18 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
+
+// Diálogo de búsqueda a mano de una canción: lo buscado, sus resultados (con su parecido) y
+// la comprobación de un enlace de YouTube pegado
+data class BusquedaManual(
+    val pista: PistaSpotify,
+    val consulta: String,
+    val buscando: Boolean = false,
+    val resultados: List<Pair<CandidatoYoutube, Similitud>> = emptyList(),
+    val buscado: Boolean = false,
+    val comprobandoEnlace: Boolean = false,
+    val enlaceNoValido: Boolean = false,
+)
 
 sealed interface EstadoSpotify {
     data object Cargando : EstadoSpotify
@@ -130,6 +144,76 @@ class SpotifyViewModel(private val app: KlippoApp, estadoGuardado: SavedStateHan
         }
     }
 
+    // --- Búsqueda a mano ---
+
+    private val _busquedaManual = MutableStateFlow<BusquedaManual?>(null)
+    val busquedaManual: StateFlow<BusquedaManual?> = _busquedaManual.asStateFlow()
+    private val idManual = "spotify-manual-$momento"
+
+    // Abre el diálogo y lanza ya la búsqueda con el texto de siempre (con más resultados)
+    fun abrirBusquedaManual(idPista: String) {
+        val pista = _filas.value.find { it.pista.id == idPista }?.pista ?: return
+        _busquedaManual.value = BusquedaManual(pista, consulta(pista))
+        buscarManual(consulta(pista))
+    }
+
+    fun buscarManual(texto: String) {
+        val actual = _busquedaManual.value ?: return
+        if (texto.isBlank()) return
+        app.motor.cancelar(idManual)
+        _busquedaManual.value = actual.copy(consulta = texto, buscando = true, enlaceNoValido = false)
+        viewModelScope.launch {
+            val resultados = runCatching { app.motor.buscarManual(idManual, texto.trim()) }.getOrDefault(emptyList())
+            _busquedaManual.update { b ->
+                b?.takeIf { it.pista.id == actual.pista.id }?.copy(
+                    buscando = false,
+                    buscado = true,
+                    resultados = resultados.map { it to Coincidencias.similitud(b.pista, it) },
+                ) ?: b
+            }
+        }
+    }
+
+    // Enlace de YouTube pegado: se comprueba y se leen sus datos antes de elegirlo
+    fun usarEnlace(texto: String) {
+        val actual = _busquedaManual.value ?: return
+        val id = EnlacesYoutube.idDeVideo(texto)
+        if (id == null) {
+            _busquedaManual.value = actual.copy(enlaceNoValido = true)
+            return
+        }
+        _busquedaManual.value = actual.copy(comprobandoEnlace = true, enlaceNoValido = false)
+        viewModelScope.launch {
+            val url = "https://www.youtube.com/watch?v=$id"
+            // Si no se pueden leer sus datos se usa igualmente: la descarga dirá si falla
+            val datos = runCatching { app.motor.datosVideo("$idManual-enlace", url) }.getOrNull()
+            elegirManual(datos ?: CandidatoYoutube(id, texto.trim(), null, null))
+        }
+    }
+
+    // El usuario elige un vídeo: queda como "elegida a mano" y se puede (volver a) bajar
+    fun elegirManual(candidato: CandidatoYoutube) {
+        val pista = _busquedaManual.value?.pista ?: return
+        val actuales = descargas.value
+        _filas.update { filas ->
+            filas.map { f ->
+                if (f.pista.id != pista.id) return@map f
+                val bajando = f.idDescarga?.let { actuales[it]?.estado } == EstadoDescarga.Descargando
+                f.copy(
+                    coincidencia = Coincidencia(Similitud.MANUAL, candidato),
+                    // Una descarga anterior (de otro vídeo) ya no cuenta, salvo si sigue en marcha
+                    idDescarga = if (bajando) f.idDescarga else null,
+                )
+            }
+        }
+        cerrarBusquedaManual()
+    }
+
+    fun cerrarBusquedaManual() {
+        app.motor.cancelar(idManual)
+        _busquedaManual.value = null
+    }
+
     fun debePedirPermisoNotificaciones(): Boolean = PermisoNotificaciones.debePedir(app)
 
     fun marcarPermisoPedido() = PermisoNotificaciones.marcarPedido(app)
@@ -177,6 +261,7 @@ class SpotifyViewModel(private val app: KlippoApp, estadoGuardado: SavedStateHan
 
     override fun onCleared() {
         app.motor.cancelarBusqueda(idBusqueda)
+        app.motor.cancelar(idManual)
     }
 
     companion object {
