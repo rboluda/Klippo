@@ -22,4 +22,6 @@ data class EtiquetasAudio(
     val creado: Long,
     // Otros vídeos de YouTube que valen, en orden, por si el primero no se puede bajar
     val alternativas: List<String> = emptyList(),
+    // Al terminar, copiarla sola a la galería (Music/Klippo/<lista>/<Artista - Título>)
+    val guardarEnGaleria: Boolean = false,
 ) : Serializable

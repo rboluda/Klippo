@@ -75,6 +75,14 @@ class SpotifyViewModel(private val app: KlippoApp, estadoGuardado: SavedStateHan
 
     val mp3: StateFlow<Boolean> = app.ajustes.spotifyMp3.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    // Guardar en la galería al terminar cada canción (se recuerda)
+    val guardarEnGaleria: StateFlow<Boolean> =
+        app.ajustes.spotifyGaleria.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+    fun cambiarGuardarEnGaleria(activo: Boolean) {
+        viewModelScope.launch { app.ajustes.guardarSpotifyGaleria(activo) }
+    }
+
     // Todas las descargas de esta lista comparten grupo; el momento de apertura ordena las
     // canciones en Klippo en el mismo orden que en Spotify
     private val momento = System.currentTimeMillis()
@@ -142,6 +150,7 @@ class SpotifyViewModel(private val app: KlippoApp, estadoGuardado: SavedStateHan
     private suspend fun lanzar(filas: List<FilaPista>) {
         val lista = (_estado.value as? EstadoSpotify.Lista) ?: return
         val calidad = if (app.ajustes.spotifyMp3.first()) Calidad.AUDIO_MP3 else Calidad.AUDIO
+        val guardar = app.ajustes.spotifyGaleria.first()
         val individual = lista.lista.enlace.tipo == TipoSpotify.TRACK
         val nuevas = filas.mapNotNull { fila ->
             val candidato = fila.coincidencia?.candidato ?: return@mapNotNull null
@@ -158,6 +167,7 @@ class SpotifyViewModel(private val app: KlippoApp, estadoGuardado: SavedStateHan
                 lista = if (individual) null else lista.lista.nombre,
                 creado = momento - pista.numero,
                 alternativas = fila.coincidencia.alternativas.take(MAX_ALTERNATIVAS).map { it.url },
+                guardarEnGaleria = guardar,
             )
             pista.id to DescargaService.descargar(app, candidato.url, calidad, etiquetas)
         }.toMap()

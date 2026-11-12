@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -58,6 +59,7 @@ import es.rboluda.klippo.descarga.Descarga
 import es.rboluda.klippo.descarga.EstadoDescarga
 import es.rboluda.klippo.descarga.PermisoNotificaciones
 import es.rboluda.klippo.spotify.Similitud
+import es.rboluda.klippo.spotify.TipoSpotify
 import es.rboluda.klippo.ui.inicio.MiniaturaVideo
 import es.rboluda.klippo.ui.inicio.resumirError
 import androidx.compose.material3.LocalContentColor
@@ -76,6 +78,7 @@ fun SpotifyScreen(
     val filas by viewModel.filas.collectAsStateWithLifecycle()
     val descargas by viewModel.descargas.collectAsStateWithLifecycle()
     val mp3 by viewModel.mp3.collectAsStateWithLifecycle()
+    val guardarEnGaleria by viewModel.guardarEnGaleria.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     // Acción que espera a la respuesta del permiso de notificaciones (se lanza igualmente)
@@ -175,11 +178,32 @@ fun SpotifyScreen(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
+                                // Casilla: cada canción pasa sola a la galería al terminar
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .clickable { viewModel.cambiarGuardarEnGaleria(!guardarEnGaleria) },
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Checkbox(checked = guardarEnGaleria, onCheckedChange = viewModel::cambiarGuardarEnGaleria)
+                                    Text(
+                                        stringResource(
+                                            R.string.spotify_guardar_galeria,
+                                            if (e.lista.enlace.tipo == TipoSpotify.TRACK) "Music/Klippo" else "Music/Klippo/${e.lista.nombre}",
+                                        ),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                }
                                 Button(
                                     onClick = {
                                         conPermiso {
                                             viewModel.descargarTodas()
-                                            Toast.makeText(context, R.string.spotify_descargando_aviso, Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(
+                                                context,
+                                                if (guardarEnGaleria) R.string.spotify_descargando_galeria else R.string.spotify_descargando_aviso,
+                                                Toast.LENGTH_LONG,
+                                            ).show()
                                         }
                                     },
                                     enabled = buscadas == filas.size && descargables > 0,

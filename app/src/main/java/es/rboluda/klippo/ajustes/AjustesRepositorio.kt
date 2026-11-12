@@ -122,6 +122,15 @@ class AjustesRepositorio(private val context: Context) {
         context.almacen.edit { it[claveSpotifyMp3] = activo }
     }
 
+    // Guardar en la galería cada canción de Spotify al terminar de bajarla (activado por defecto)
+    private val claveSpotifyGaleria = booleanPreferencesKey("spotify_galeria")
+
+    val spotifyGaleria: Flow<Boolean> = context.almacen.data.map { it[claveSpotifyGaleria] ?: true }
+
+    suspend fun guardarSpotifyGaleria(activo: Boolean) {
+        context.almacen.edit { it[claveSpotifyGaleria] = activo }
+    }
+
     suspend fun guardarBuscarActualizaciones(activo: Boolean) {
         context.almacen.edit { it[claveBuscarActualizaciones] = activo }
     }
