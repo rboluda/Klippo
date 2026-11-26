@@ -34,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -171,13 +172,59 @@ fun EditorScreen(
         reproductor?.volume = if (silenciar) 0f else 1f
     }
 
-    // Vista previa del recorte: la reproducción se queda dentro del tramo elegido, en bucle
+    // Vista previa de un extremo del corte (null = reproducción normal)
+    var vistaPrevia by remember { mutableStateOf<VistaPrevia?>(null) }
+    val fotogramaMs = medidas?.fotogramaMs ?: 33L
+
+    // Reproduce los 3 últimos segundos del tramo y se para en el último fotograma que tendrá
+    // el vídeo exportado (FFmpeg exporta los fotogramas anteriores al fin; ExoPlayer muestra
+    // el primero igual o posterior a la posición buscada: por eso fin - 1 fotograma)
+    val verFinal = { tramo: Recorte ->
+        val ultimo = maxOf(tramo.inicioMs, tramo.finMs - fotogramaMs)
+        reproductor?.let { player ->
+            val previa = VistaPrevia(maxOf(tramo.inicioMs, tramo.finMs - SEGUNDOS_PREVIA_MS), ultimo, ultimo)
+            vistaPrevia = previa
+            player.seekTo(previa.desdeMs)
+            player.play()
+        }
+    }
+    // Reproduce los 3 primeros segundos del tramo y se para ahí
+    val verInicio = { tramo: Recorte ->
+        reproductor?.let { player ->
+            val hasta = minOf(tramo.inicioMs + SEGUNDOS_PREVIA_MS, tramo.finMs - fotogramaMs).coerceAtLeast(tramo.inicioMs)
+            val previa = VistaPrevia(tramo.inicioMs, hasta, hasta)
+            vistaPrevia = previa
+            player.seekTo(previa.desdeMs)
+            player.play()
+        }
+    }
+
+    // Vista previa del recorte: la reproducción se queda dentro del tramo elegido, en bucle.
+    // Mientras se ve un extremo (vistaPrevia) no hay bucle: se para al llegar a su punto.
     LaunchedEffect(reproductor, recorte) {
         val tramo = recorte ?: return@LaunchedEffect
         val player = reproductor ?: return@LaunchedEffect
+        // Vista previa que ya ha empezado a sonar (para distinguir la pausa del usuario de la
+        // espera inicial mientras carga)
+        var enMarcha: VistaPrevia? = null
         while (true) {
-            // En pausa no se toca: al arrastrar el final se muestra ese fotograma
+            val previa = vistaPrevia
             val posicion = player.currentPosition
+            if (previa != null) {
+                if (player.isPlaying) enMarcha = previa
+                when {
+                    posicion >= previa.paradaMs -> {
+                        vistaPrevia = null
+                        player.pause()
+                        player.seekTo(previa.fotogramaMs)
+                    }
+                    // Pausada a mano (o terminada): se cancela la vista previa
+                    enMarcha === previa && !player.isPlaying -> vistaPrevia = null
+                }
+                delay(15)
+                continue
+            }
+            // En pausa no se toca: al arrastrar el final se muestra ese fotograma
             if (player.isPlaying && (posicion >= tramo.finMs || posicion < tramo.inicioMs - MARGEN_MS)) {
                 player.seekTo(tramo.inicioMs)
             }
@@ -225,10 +272,15 @@ fun EditorScreen(
                         onCambiar = { inicio, fin, movido ->
                             viewModel.cambiarRecorte(inicio, fin)
                             // Mientras se arrastra se ve el fotograma del extremo que se mueve
+                            vistaPrevia = null
                             reproductor?.pause()
                             reproductor?.seekTo(movido)
                         },
-                        onSoltar = { reproductor?.seekTo(tramo.inicioMs) },
+                        // Al soltar un tirador (o escribir un tiempo) se ve cómo queda ese extremo
+                        onSoltar = { extremo, nuevo ->
+                            if (extremo == Extremo.FIN) verFinal(nuevo) else verInicio(nuevo)
+                        },
+                        onUltimos = { verFinal(tramo) },
                     )
                 }
                 if (herramienta == Herramienta.ENCUADRE) {
@@ -315,8 +367,15 @@ fun EditorScreen(
 // Margen para no saltar al inicio por redondeos al buscar justo en el borde del tramo
 private const val MARGEN_MS = 250L
 
-// Extremo del recorte que se está escribiendo a mano
+// Extremo del recorte (el que se escribe a mano o el último tirador movido)
 private enum class Extremo { INICIO, FIN }
+
+// Vista previa de un extremo: se reproduce desde [desdeMs] y al llegar a [paradaMs] se pausa
+// en [fotogramaMs]
+private data class VistaPrevia(val desdeMs: Long, val paradaMs: Long, val fotogramaMs: Long)
+
+// Lo que dura la vista previa de cada extremo
+private const val SEGUNDOS_PREVIA_MS = 3_000L
 
 // Doble barra para elegir inicio y fin; los tiempos son botones para escribirlos a mano
 // con precisión de décima
@@ -325,9 +384,15 @@ private fun PanelRecorte(
     recorte: Recorte,
     duracionMs: Long,
     onCambiar: (inicioMs: Long, finMs: Long, movidoMs: Long) -> Unit,
-    onSoltar: () -> Unit,
+    // Se ha soltado un tirador o escrito un tiempo: qué extremo y cómo queda el recorte
+    onSoltar: (Extremo, Recorte) -> Unit,
+    // Botón «Últimos 3 s»: repetir la vista previa del final sin mover nada
+    onUltimos: () -> Unit,
 ) {
     var editando by rememberSaveable { mutableStateOf<Extremo?>(null) }
+    // Tirador que se está arrastrando (para saber cuál se ha soltado)
+    var arrastrando by remember { mutableStateOf(Extremo.FIN) }
+    val recorteActual = rememberUpdatedState(recorte)
     val minimo = EditorViewModel.DURACION_MINIMA_MS
 
     when (editando) {
@@ -338,6 +403,7 @@ private fun PanelRecorte(
             maximoMs = recorte.finMs - minimo,
             onAceptar = { ms ->
                 onCambiar(ms, recorte.finMs, ms)
+                onSoltar(Extremo.INICIO, Recorte(ms, recorte.finMs))
                 editando = null
             },
             onCancelar = { editando = null },
@@ -349,6 +415,7 @@ private fun PanelRecorte(
             maximoMs = duracionMs,
             onAceptar = { ms ->
                 onCambiar(recorte.inicioMs, ms, ms)
+                onSoltar(Extremo.FIN, Recorte(recorte.inicioMs, ms))
                 editando = null
             },
             onCancelar = { editando = null },
@@ -372,6 +439,9 @@ private fun PanelRecorte(
                     textAlign = TextAlign.Center,
                     modifier = Modifier.weight(1f),
                 )
+                TextButton(onClick = onUltimos) {
+                    Text(stringResource(R.string.recorte_ultimos))
+                }
                 TextButton(onClick = { editando = Extremo.FIN }) {
                     Text(stringResource(R.string.recorte_fin, formatearTiempo(recorte.finMs)))
                 }
@@ -382,9 +452,12 @@ private fun PanelRecorte(
                     val inicio = rango.start.toLong()
                     val fin = rango.endInclusive.toLong()
                     val movido = if (inicio != recorte.inicioMs) inicio else fin
+                    if (inicio != recorte.inicioMs) arrastrando = Extremo.INICIO
+                    else if (fin != recorte.finMs) arrastrando = Extremo.FIN
                     onCambiar(inicio, fin, movido)
                 },
-                onValueChangeFinished = onSoltar,
+                // El recorte que se ve aquí aún puede ser el de antes de soltar: se usa el actual
+                onValueChangeFinished = { onSoltar(arrastrando, recorteActual.value) },
                 valueRange = 0f..duracionMs.toFloat(),
                 modifier = Modifier.fillMaxWidth(),
             )

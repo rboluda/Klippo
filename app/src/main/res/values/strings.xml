@@ -126,6 +126,7 @@
     <string name="emoji_ayuda">Arrastra para mover, pellizca para cambiar el tamaño, mantén pulsado para borrar.</string>
     <string name="recorte_inicio">Inicio %1$s</string>
     <string name="recorte_fin">Fin %1$s</string>
+    <string name="recorte_ultimos">Últimos 3 s</string>
     <string name="tiempo_titulo_inicio">Inicio del recorte</string>
     <string name="tiempo_titulo_fin">Fin del recorte</string>
     <string name="tiempo_minutos">min</string>

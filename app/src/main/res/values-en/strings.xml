@@ -120,6 +120,7 @@
     <string name="emoji_ayuda">Drag to move, pinch to resize, long-press to delete.</string>
     <string name="recorte_inicio">Start %1$s</string>
     <string name="recorte_fin">End %1$s</string>
+    <string name="recorte_ultimos">Last 3 s</string>
     <string name="tiempo_titulo_inicio">Trim start</string>
     <string name="tiempo_titulo_fin">Trim end</string>
     <string name="tiempo_minutos">min</string>
